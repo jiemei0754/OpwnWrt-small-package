@@ -8,7 +8,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 */8 * * *"
+    - cron: "0 16 * * 0" # 北京时间每周一 0:00 AM 自动运行
   workflow_dispatch:
 
 jobs:
