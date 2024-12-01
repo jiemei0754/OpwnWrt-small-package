@@ -318,6 +318,71 @@ return view.extend({
 		so.depends({type: /^(vmess|vless)$/});
 		so.modalonly = true;
 
+		/* WireGuard fields */
+		so = ss.taboption('field_general', form.Value, 'wireguard_ip', _('Local address'),
+			_('The %s address used by local machine in the Wireguard network.').format('IPv4'));
+		so.datatype = 'ip4addr(1)';
+		so.rmempty = false;
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_ipv6', _('Local IPv6 address'),
+			_('The %s address used by local machine in the Wireguard network.').format('IPv6'));
+		so.datatype = 'ip6addr(1)';
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_private_key', _('Private key'),
+			_('WireGuard requires base64-encoded private keys.'));
+		so.password = true;
+		so.validate = L.bind(hm.validateBase64Key, so, 44);
+		so.rmempty = false;
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_peer_public_key', _('Peer pubkic key'),
+			_('WireGuard peer public key.'));
+		so.validate = L.bind(hm.validateBase64Key, so, 44);
+		so.rmempty = false;
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_pre_shared_key', _('Pre-shared key'),
+			_('WireGuard pre-shared key.'));
+		so.password = true;
+		so.validate = L.bind(hm.validateBase64Key, so, 44);
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.DynamicList, 'wireguard_allowed_ips', _('Allowed IPs'),
+			_('Destination addresses allowed to be forwarded via Wireguard.'));
+		so.datatype = 'cidr';
+		so.placeholder = '0.0.0.0/0';
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.DynamicList, 'wireguard_reserved', _('Reserved field bytes'));
+		so.datatype = 'integer';
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_mtu', _('MTU'));
+		so.datatype = 'range(0,9000)';
+		so.placeholder = '1408';
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Flag, 'wireguard_remote_dns_resolve', _('Remote DNS resolve'),
+			_('Force DNS remote resolution.'));
+		so.default = so.disabled;
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.DynamicList, 'wireguard_dns', _('DNS server'));
+		so.datatype = 'or(host, hostport)';
+		so.depends('wireguard_remote_dns_resolve', '1');
+		so.modalonly = true;
+
 		/* Plugin fields */
 		so = ss.taboption('field_general', form.ListValue, 'plugin', _('Plugin'));
 		so.value('', _('none'));
@@ -680,10 +745,11 @@ return view.extend({
 		so.default = so.disabled;
 		so.modalonly = true;
 
-		// dev: Features under development
+		/* Features are implemented in proxy chain
 		so = ss.taboption('field_dial', form.Value, 'dialer_proxy', _('dialer-proxy'));
 		so.readonly = true;
 		so.modalonly = true;
+		*/
 
 		so = ss.taboption('field_dial', widgets.DeviceSelect, 'interface_name', _('Bind interface'),
 			_('Bind outbound interface.</br>') +
@@ -884,10 +950,11 @@ return view.extend({
 		so.default = so.disabled;
 		so.modalonly = true;
 
-		// dev: Features under development
+		/* Features are implemented in proxy chain
 		so = ss.taboption('field_override', form.Value, 'override_dialer_proxy', _('dialer-proxy'));
 		so.readonly = true;
 		so.modalonly = true;
+		*/
 
 		so = ss.taboption('field_override', widgets.DeviceSelect, 'override_interface_name', _('Bind interface'),
 			_('Bind outbound interface.</br>') +
@@ -968,6 +1035,130 @@ return view.extend({
 		so.editable = true;
 		so.modalonly = false;
 		/* Provider END */
+
+		/* Proxy chain START */
+		s.tab('dialer_proxy', _('Proxy chain'));
+
+		/* Proxy chain */
+		o = s.taboption('dialer_proxy', form.SectionValue, '_dialer_proxy', form.GridSection, 'dialer_proxy', null);
+		ss = o.subsection;
+		var prefmt = { 'prefix': 'chain_', 'suffix': '' };
+		ss.addremove = true;
+		ss.rowcolors = true;
+		ss.sortable = true;
+		ss.nodescriptions = true;
+		ss.modaltitle = L.bind(hm.loadModalTitle, ss, _('Proxy chain'), _('Add a proxy chain'));
+		ss.sectiontitle = L.bind(hm.loadDefaultLabel, ss);
+		ss.renderSectionAdd = L.bind(hm.renderSectionAdd, ss, prefmt, true);
+		ss.handleAdd = L.bind(hm.handleAdd, ss, prefmt);
+
+		so = ss.option(form.Value, 'label', _('Label'));
+		so.load = L.bind(hm.loadDefaultLabel, so);
+		so.validate = L.bind(hm.validateUniqueValue, so);
+		so.modalonly = true;
+
+		so = ss.option(form.Flag, 'enabled', _('Enable'));
+		so.default = so.enabled;
+		so.editable = true;
+
+		so = ss.option(form.ListValue, 'type', _('Type'));
+		so.value('node', _('Proxy Node'));
+		so.value('provider', _('Provider'));
+		so.default = 'node';
+		so.textvalue = L.bind(hm.textvalue2Value, so);
+
+		so = ss.option(form.DummyValue, '_value', _('Value'));
+		so.load = function(section_id) {
+			var type = uci.get(data[0], section_id, 'type');
+			var detour = uci.get(data[0], section_id, 'chain_tail_group') || uci.get(data[0], section_id, 'chain_tail');
+
+			switch (type) {
+				case 'node':
+					return '%s » %s'.format(
+						uci.get(data[0], section_id, 'chain_head'),
+						detour
+					);
+				case 'provider':
+					return '%s » %s'.format(
+						uci.get(data[0], section_id, 'chain_head_sub'),
+						detour
+					);
+				default:
+					return null;
+			}
+		}
+		so.modalonly = false;
+
+		so = ss.option(form.ListValue, 'chain_head_sub', _('Chain head'));
+		so.load = L.bind(hm.loadProviderLabel, so);
+		so.rmempty = false;
+		so.depends('type', 'provider');
+		so.modalonly = true;
+
+		so = ss.option(form.ListValue, 'chain_head', _('Chain head'),
+			_('Recommended to use UoT node.</br>such as <code>%s</code>.')
+			.format('ss|ssr|vmess|vless|trojan|tuic'));
+		so.load = L.bind(hm.loadNodeLabel, so);
+		so.rmempty = false;
+		so.validate = function(section_id, value) {
+			var chain_tail = this.section.getUIElement(section_id, 'chain_tail').getValue();
+
+			if (value === chain_tail)
+				return _('Expecting: %s').format(_('Different chain head/tail'));
+
+			return true;
+		}
+		so.depends('type', 'node');
+		so.modalonly = true;
+
+		/*
+		so = ss.option(hm.CBIStaticList, 'chain_body', _('Chain body'));
+		so.value('', _('-- Please choose --'));
+		so.load = L.bind(hm.loadNodeLabel, so);
+		so.validate = function(section_id, value) {
+			var chain_head = this.section.getUIElement(section_id, 'chain_head').getValue();
+			var chain_tail = this.section.getUIElement(section_id, 'chain_tail').getValue();
+			var value = this.getUIElement(section_id).getValue();
+
+			if (value.includes(chain_head) || value.includes(chain_tail))
+				return _('Expecting: %s').format(_('Different with chain head/tail'));
+
+			return true;
+		}
+		so.textvalue = function(section_id) {
+			var cvals = this.cfgvalue(section_id);
+			//alert(Array.prototype.join.call(cvals, ':'));
+			return cvals ? '» ' + cvals.map((cval) => {
+				var i = this.keylist.indexOf(cval);
+
+				return this.vallist[i];
+			}).join(' » ') + ' »' : '»';
+		}
+		*/
+
+		so = ss.option(form.ListValue, 'chain_tail_group', _('Chain tail'));
+		so.value('', _('-- Please choose --'));
+		so.load = L.bind(hm.loadProxyGroupLabel, so, [['', _('-- Please choose --')]]);
+		so.rmempty = false;
+		so.depends({chain_tail: /.+/, '!reverse': true});
+		so.modalonly = true;
+
+		so = ss.option(form.ListValue, 'chain_tail', _('Chain tail'),
+			_('Recommended to use UoT node.</br>such as <code>%s</code>.')
+			.format('ss|ssr|vmess|vless|trojan|tuic'));
+		so.load = L.bind(hm.loadNodeLabel, so);
+		so.rmempty = false;
+		so.validate = function(section_id, value) {
+			var chain_head = this.section.getUIElement(section_id, 'chain_head').getValue();
+
+			if (value === chain_head)
+				return _('Expecting: %s').format(_('Different chain head/tail'));
+
+			return true;
+		}
+		so.depends({chain_tail_group: /.+/, '!reverse': true});
+		so.modalonly = true;
+		/* Proxy chain END */
 
 		return m.render();
 	}

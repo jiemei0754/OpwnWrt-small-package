@@ -40,6 +40,7 @@ const ucisniff = 'sniff',
       ucipgrp = 'proxy_group',
       ucinode = 'node',
       uciprov = 'provider',
+      ucichain = 'dialer_proxy',
       ucirule = 'ruleset',
       ucirout = 'rules',
       ucisubro = 'subrules';
@@ -178,6 +179,25 @@ function parse_entry(cfg) {
 
 /* Main */
 const config = {};
+
+/* All Proxy chain object */
+const dialerproxy = {};
+uci.foreach(uciconf, ucichain, (cfg) => {
+	if (cfg.enabled === '0')
+		return;
+
+	let identifier = '';
+	if (cfg.type === 'provider')
+		identifier = cfg.chain_head_sub;
+	else if (cfg.type === 'node')
+		identifier = cfg.chain_head;
+	else
+		return;
+
+	dialerproxy[identifier] = {
+		detour: get_proxygroup(cfg.chain_tail_group) || get_proxynode(cfg.chain_tail)
+	};
+});
 
 /* General START */
 /* General settings */
@@ -434,18 +454,18 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		/* Dial fields */
 		tfo: strToBool(cfg.tfo),
 		mptcp: strToBool(cfg.mptcp),
-		// dev: Features under development
-		["dialer-proxy"]: null, //cfg.dialer_proxy,
+		["dialer-proxy"]: dialerproxy[cfg['.name']]?.detour,
 		["interface-name"]: cfg.interface_name,
 		["routing-mark"]: strToInt(cfg.routing_mark),
 		["ip-version"]: cfg.ip_version,
 
-		/* HTTP / SOCKS / Shadowsocks / VMess / VLESS / Trojan / hysteria2 / TUIC / SSH */
+		/* HTTP / SOCKS / Shadowsocks / VMess / VLESS / Trojan / hysteria2 / TUIC / SSH / WireGuard */
 		username: cfg.username,
 		uuid: cfg.vmess_uuid || cfg.uuid,
 		cipher: cfg.vmess_chipher || cfg.shadowsocks_chipher,
 		password: cfg.shadowsocks_password || cfg.password,
 		headers: cfg.headers ? json(cfg.headers) : null,
+		["private-key"]: cfg.wireguard_private_key || cfg.ssh_priv_key,
 
 		/* Hysteria / Hysteria2 */
 		ports: isEmpty(cfg.hysteria_ports) ? null : join(',', cfg.hysteria_ports),
@@ -455,7 +475,6 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		["obfs-password"]: cfg.hysteria_obfs_password,
 
 		/* SSH */
-		["private-key"]: cfg.ssh_priv_key,
 		["private-key-passphrase"]: cfg.ssh_priv_key_passphrase,
 		["host-key-algorithms"]: cfg.ssh_host_key_algorithms,
 		["host-key"]: cfg.ssh_host_key,
@@ -496,6 +515,17 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		["global-padding"]: cfg.type === 'vmess' ? (cfg.vmess_global_padding === '0' ? false : true) : null,
 		["authenticated-length"]: strToBool(cfg.vmess_authenticated_length),
 		["packet-encoding"]: cfg.vmess_packet_encoding,
+
+		/* WireGuard */
+		ip: cfg.wireguard_ip,
+		ipv6: cfg.wireguard_ipv6,
+		["public-key"]: cfg.wireguard_peer_public_key,
+		["pre-shared-key"]: cfg.wireguard_pre_shared_key,
+		["allowed-ips"]: cfg.wireguard_allowed_ips,
+		reserved: cfg.wireguard_reserved,
+		mtu: strToInt(cfg.wireguard_mtu),
+		["remote-dns-resolve"]: strToBool(cfg.wireguard_remote_dns_resolve),
+		dns: cfg.wireguard_dns,
 
 		/* Plugin fields */
 		plugin: cfg.plugin,
@@ -647,8 +677,7 @@ uci.foreach(uciconf, uciprov, (cfg) => {
 		up: cfg.override_up ? cfg.override_up + ' Mbps' : null,
 		down: cfg.override_down ? cfg.override_down + ' Mbps' : null,
 		["skip-cert-verify"]: strToBool(cfg.override_skip_cert_verify) || false,
-		// dev: Features under development
-		["dialer-proxy"]: null, //cfg.override_dialer_proxy,
+		["dialer-proxy"]: dialerproxy[cfg['.name']]?.detour,
 		["interface-name"]: cfg.override_interface_name,
 		["routing-mark"]: strToInt(cfg.override_routing_mark),
 		["ip-version"]: cfg.override_ip_version
@@ -715,5 +744,8 @@ uci.foreach(uciconf, ucisubro, (cfg) => {
 	push(config["sub-rules"][cfg.group], parse_entry(cfg.entry));
 });
 /* Sub rules END */
+
+/* Debug dialer-proxy */
+//config.dialerproxy = dialerproxy;
 
 printf('%.J\n', removeBlankAttrs(config));
