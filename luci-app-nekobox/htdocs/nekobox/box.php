@@ -173,7 +173,7 @@ EOL;
         <form method="post" action="">
             <div class="mb-3">
                 <label for="subscribeUrl" class="form-label">订阅链接地址:</label>
-                <input type="text" class="form-control" id="subscribeUrl" name="subscribeUrl" value="<?php echo htmlspecialchars($lastSubscribeUrl); ?>" placeholder="输入订阅链接" required>
+                <input type="text" class="form-control" id="subscribeUrl" name="subscribeUrl" value="<?php echo htmlspecialchars($lastSubscribeUrl); ?>" placeholder="输入订阅链接（多个链接用  |  分隔）" required>
             </div>
             <div class="mb-3">
                 <label for="customFileName" class="form-label">自定义文件名（无需输入后缀）</label>
@@ -315,13 +315,20 @@ EOL;
 
             $completeSubscribeUrl = "https://sing-box-subscribe-doraemon.vercel.app/config/{$subscribeUrlEncoded}&file={$templateUrlEncoded}";
             $tempFilePath = '/tmp/' . $customFileName;
+            $logMessages = [];
             $command = "wget -O " . escapeshellarg($tempFilePath) . " " . escapeshellarg($completeSubscribeUrl);
             exec($command, $output, $returnVar);
-            $logMessages = [];
+
+            if ($returnVar !== 0) {
+                $command = "curl -s -L -o " . escapeshellarg($tempFilePath) . " " . escapeshellarg($completeSubscribeUrl);
+                exec($command, $output, $returnVar);
 
             if ($returnVar !== 0) {
                 $logMessages[] = "无法下载内容: " . htmlspecialchars($completeSubscribeUrl);
-            } else {
+                }
+            }
+
+            if ($returnVar === 0) {
                 $downloadedContent = file_get_contents($tempFilePath);
                 if ($downloadedContent === false) {
                     $logMessages[] = "无法读取下载的文件内容";

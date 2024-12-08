@@ -189,7 +189,7 @@
         <li><a href="?page=personal" class="<?= (isset($_GET['page']) && $_GET['page'] == 'personal') ? 'active' : '' ?>">  Personal</a></li>
         <li><a href="?page=video" class="<?= (isset($_GET['page']) && $_GET['page'] == 'video') ? 'active' : '' ?>"> Video</a></li>
         <li><a href="?page=neko_yacd" class="<?= (isset($_GET['page']) && $_GET['page'] == 'neko_yacd') ? 'active' : '' ?>">Meta-Yacd</a></li>
-        <li><a href="?page=neko_meta" class="<?= (isset($_GET['page']) && $_GET['page'] == 'neko_meta') ? 'active' : '' ?>">MetaCubeXD</a></li>
+        <li><a href="?page=neko_meta" class="<?= (isset($_GET['page']) && $_GET['page'] == 'neko_meta') ? 'active' : '' ?>">ZASHBOARD</a></li>
     </ul>
 </nav>
 
@@ -231,7 +231,7 @@
                           fetch("/nekobox/lib/log.php?data=url_dash")
                               .then(response => response.json())
                               .then(data => {
-                                  document.getElementById("neko").src = data.meta;
+                                  document.getElementById("neko").src = data.zash;
                               })
                               .catch(error => {
                                   console.error("Error fetching URL data:", error);
