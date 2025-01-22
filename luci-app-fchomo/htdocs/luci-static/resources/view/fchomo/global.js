@@ -168,7 +168,6 @@ return view.extend({
 		const res_ver_geoip = data[7];
 		const res_ver_geosite = data[8];
 
-		const less_24_10 = !form.RichListValue;
 		const dashboard_repo = uci.get(data[0], 'api', 'dashboard_repo');
 
 		let m, s, o, ss, so;
@@ -473,7 +472,7 @@ return view.extend({
 		}
 		so.default = 'system';
 		so.rmempty = false;
-		if (less_24_10)
+		if (hm.less_24_10)
 			so.onchange = function(ev, section_id, value) {
 				var desc = ev.target.nextSibling;
 				if (value === 'mixed')
@@ -727,7 +726,7 @@ return view.extend({
 		/* Routing control */
 		ss.tab('routing_control', _('Routing Control'));
 
-		so = ss.taboption('routing_control', form.MultiValue, 'routing_tcpport', _('Routing ports') + ' (TCP)',
+		so = ss.taboption('routing_control', hm.RichMultiValue, 'routing_tcpport', _('Routing ports') + ' (TCP)',
 			_('Specify target ports to be proxied. Multiple ports must be separated by commas.'));
 		so.create = true;
 		hm.routing_port_type.forEach((res) => {
@@ -736,7 +735,7 @@ return view.extend({
 		})
 		so.validate = L.bind(hm.validateCommonPort, so);
 
-		so = ss.taboption('routing_control', form.MultiValue, 'routing_udpport', _('Routing ports') + ' (UDP)',
+		so = ss.taboption('routing_control', hm.RichMultiValue, 'routing_udpport', _('Routing ports') + ' (UDP)',
 			_('Specify target ports to be proxied. Multiple ports must be separated by commas.'));
 		so.create = true;
 		hm.routing_port_type.forEach((res) => {
