@@ -1,77 +1,36 @@
-<?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $primaryColor = $_POST['primaryColor'] ?? '#0ceda2'; 
-    $secondaryColor = $_POST['secondaryColor'] ?? '#00ffff'; 
-    $bodyBgColor = $_POST['bodyBgColor'] ?? '#23407e'; 
-    $bodyColor = $_POST['bodyColor'] ?? '#04f153'; 
-    $infoBgSubtle = $_POST['infoBgSubtle'] ?? '#23407e'; 
-    $primaryBorderSubtle = $_POST['primaryBorderSubtle'] ?? '#1815d1'; 
-    $tertiaryColor = $_POST['tertiaryColor'] ?? '#46e1ec'; 
-    $tertiaryRgbColor = $_POST['tertiaryRgbColor'] ?? '#1e90ff'; 
-    $selectColor = $_POST['selectColor'] ?? '#23407e'; 
-    $backgroundColor = $_POST['backgroundColor'] ?? '#20cdd9'; 
-    $placeholderColor = $_POST['placeholderColor'] ?? '#f82af2';
-    $logTextColor = $_POST['logTextColor'] ?? '#f8f9fa'; 
-    $heading1Color = $_POST['heading1Color'] ?? '#21e4f2'; 
-    $heading2Color = $_POST['heading2Color'] ?? '#65f1fb'; 
-    $heading3Color = $_POST['heading3Color'] ?? '#ffcc00'; 
-    $heading4Color = $_POST['heading4Color'] ?? '#00fbff'; 
-    $heading5Color = $_POST['heading5Color'] ?? '#ba13f6'; 
-    $heading6Color = $_POST['heading6Color'] ?? '#00ffff'; 
-    $outlineColor = $_POST['outlineColor'] ?? '#0dcaf0'; 
-    $successColor = $_POST['successColor'] ?? '#28a745'; 
-    $infoColor = $_POST['infoColor'] ?? '#0ca2ed'; 
-    $warningColor = $_POST['warningColor'] ?? '#ffc107'; 
-    $pinkColor = $_POST['pinkColor'] ?? '#f82af2';
-    $dangerColor = $_POST['dangerColor'] ?? '#dc3545';
 
-    $uploadedImagePath = '';
-    if (isset($_FILES['imageFile']) && $_FILES['imageFile']['error'] === UPLOAD_ERR_OK) {
-        $targetDir = $_SERVER['DOCUMENT_ROOT'] . '/nekobox/assets/Pictures/';
-        if (!file_exists($targetDir)) {
-            mkdir($targetDir, 0777, true); 
-        }
-        $targetFile = $targetDir . basename($_FILES['imageFile']['name']);
-        if (move_uploaded_file($_FILES['imageFile']['tmp_name'], $targetFile)) {
-            $uploadedImagePath = '/nekobox/assets/Pictures/' . basename($_FILES['imageFile']['name']);
-        }
-    }
-
-    $backgroundImagePath = $_POST['backgroundImage'] ?? '';
-    $enableSnowEffect = isset($_POST['enableSnowEffect']) ? true : false; 
-    $cssContent = "
 
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@400;700&family=Cinzel+Decorative:wght@700;900&display=swap');
     
     [data-bs-theme=transparent] {
       color-scheme: dark;
-      --bs-primary: $primaryColor; 
-      --bs-secondary: $secondaryColor; 
-      --bs-body-bg: $bodyBgColor; 
-      --bs-body-color: $bodyColor;
-      --bs-info-bg-subtle: $infoBgSubtle;
-      --placeholder-color: $placeholderColor;
-      --bs-btn-outline-bg: $outlineColor;
-      --bs-btn-success-bg: $successColor;
-      --bs-btn-info-bg: $infoColor;
-      --bs-btn-warning-bg: $warningColor;
-      --bs-btn-pink-bg: $pinkColor;
-      --bs-btn-danger-bg: $dangerColor;
+      --bs-primary: #0ceda2; 
+      --bs-secondary: #00ffff; 
+      --bs-body-bg: #23407e; 
+      --bs-body-color: #04f153;
+      --bs-info-bg-subtle: #23407e;
+      --placeholder-color: #f82af2;
+      --bs-btn-outline-bg: #0dcaf0;
+      --bs-btn-success-bg: #28a745;
+      --bs-btn-info-bg: #0ca2ed;
+      --bs-btn-warning-bg: #ffc107;
+      --bs-btn-pink-bg: #f82af2;
+      --bs-btn-danger-bg: #dc3545;
 
-      --bs-primary-border-subtle: $primaryBorderSubtle; 
-      --bs-tertiary: $tertiaryColor; 
-      --bs-tertiary-rgb: $tertiaryRgbColor; 
-      --bs-tertiary-color: $primaryBorderSubtle;
-      --bs-tertiary-color-rgb: $backgroundColor; 
-      --bs-form-select: $selectColor; 
-      --log-text-color: $logTextColor; 
-      --bs-heading-1: $heading1Color; 
-      --bs-heading-2: $heading2Color; 
-      --bs-heading-3: $heading3Color; 
-      --bs-heading-4: $heading4Color; 
-      --bs-heading-5: $heading5Color; 
-      --bs-heading-6: $heading6Color; 
+      --bs-primary-border-subtle: #1815d1; 
+      --bs-tertiary: #46e1ec; 
+      --bs-tertiary-rgb: #1e90ff; 
+      --bs-tertiary-color: #1815d1;
+      --bs-tertiary-color-rgb: #20cdd9; 
+      --bs-form-select: #23407e; 
+      --log-text-color: #f8f9fa; 
+      --bs-heading-1: #21e4f2; 
+      --bs-heading-2: #65f1fb; 
+      --bs-heading-3: #ffcc00; 
+      --bs-heading-4: #00fbff; 
+      --bs-heading-5: #ba13f6; 
+      --bs-heading-6: #00ffff; 
 
       --bs-heading-font-family: 'Montserrat', sans-serif;
       --bs-heading-font-weight: 700;
@@ -88,6 +47,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       --bs-btn-disabled-color: #fff;
       --bs-body-font-family: 'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif;
     }
+    #snow-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        display: block;
+    }
+
+    .snowflake {
+        position: absolute;
+        top: -10px;  
+        width: 10px;
+        height: 10px;
+        background-color: white;
+        border-radius: 50%;
+        animation: fall linear infinite;  
+    }
+
+    @keyframes fall {
+        0% {
+            transform: translateY(0) rotate(0deg); 
+        }
+        100% {
+            transform: translateY(100vh) rotate(360deg); 
+        }
+    }
+
+    .snowflake:nth-child(1) {
+        animation-duration: 8s;
+        animation-delay: -2s;
+        left: 10%;
+        width: 12px;
+        height: 12px;
+    }
+
+    .snowflake:nth-child(2) {
+        animation-duration: 10s;
+        animation-delay: -3s;
+        left: 20%;
+        width: 8px;
+        height: 8px;
+    }
+
+    .snowflake:nth-child(3) {
+        animation-duration: 12s;
+        animation-delay: -1s;
+        left: 30%;
+        width: 15px;
+        height: 15px;
+    }
+
+    .snowflake:nth-child(4) {
+        animation-duration: 9s;
+        animation-delay: -5s;
+        left: 40%;
+        width: 10px;
+        height: 10px;
+    }
+
+    .snowflake:nth-child(5) {
+        animation-duration: 11s;
+        animation-delay: -4s;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+    }
+
+    .snowflake:nth-child(6) {
+        animation-duration: 7s;
+        animation-delay: -6s;
+        left: 60%;
+        width: 9px;
+        height: 9px;
+    }
+
+    .snowflake:nth-child(7) {
+        animation-duration: 8s;
+        animation-delay: -7s;
+        left: 70%;
+        width: 11px;
+        height: 11px;
+    }
+
+    .snowflake:nth-child(8) {
+        animation-duration: 10s;
+        animation-delay: -8s;
+        left: 80%;
+        width: 13px;
+        height: 13px;
+    }
+
+    .snowflake:nth-child(9) {
+        animation-duration: 6s;
+        animation-delay: -9s;
+        left: 90%;
+        width: 10px;
+        height: 10px;
+    }
+        
 
     body {
       background-color: var(--bs-body-bg);
@@ -95,8 +156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
-      " . ($backgroundImagePath ? "background-image: url('$backgroundImagePath'); background-repeat: no-repeat; background-position: center center; background-attachment: fixed; background-size: cover;" : "") . "
-      " . ($uploadedImagePath && empty($backgroundImagePath) ? "background-image: url('$uploadedImagePath'); background-repeat: no-repeat; background-position: center center; background-attachment: fixed; background-size: cover;" : "") . "
+      
+      
     }
 
     h1 { color: var(--bs-heading-1) !important; }
@@ -534,151 +595,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 10px; 
         }
     }
-    ";
-
-    if ($enableSnowEffect) {
-        $snowEffectCSS = "
-    #snow-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 9999;
-        display: block;
-    }
-
-    .snowflake {
-        position: absolute;
-        top: -10px;  
-        width: 10px;
-        height: 10px;
-        background-color: white;
-        border-radius: 50%;
-        animation: fall linear infinite;  
-    }
-
-    @keyframes fall {
-        0% {
-            transform: translateY(0) rotate(0deg); 
-        }
-        100% {
-            transform: translateY(100vh) rotate(360deg); 
-        }
-    }
-
-    .snowflake:nth-child(1) {
-        animation-duration: 8s;
-        animation-delay: -2s;
-        left: 10%;
-        width: 12px;
-        height: 12px;
-    }
-
-    .snowflake:nth-child(2) {
-        animation-duration: 10s;
-        animation-delay: -3s;
-        left: 20%;
-        width: 8px;
-        height: 8px;
-    }
-
-    .snowflake:nth-child(3) {
-        animation-duration: 12s;
-        animation-delay: -1s;
-        left: 30%;
-        width: 15px;
-        height: 15px;
-    }
-
-    .snowflake:nth-child(4) {
-        animation-duration: 9s;
-        animation-delay: -5s;
-        left: 40%;
-        width: 10px;
-        height: 10px;
-    }
-
-    .snowflake:nth-child(5) {
-        animation-duration: 11s;
-        animation-delay: -4s;
-        left: 50%;
-        width: 14px;
-        height: 14px;
-    }
-
-    .snowflake:nth-child(6) {
-        animation-duration: 7s;
-        animation-delay: -6s;
-        left: 60%;
-        width: 9px;
-        height: 9px;
-    }
-
-    .snowflake:nth-child(7) {
-        animation-duration: 8s;
-        animation-delay: -7s;
-        left: 70%;
-        width: 11px;
-        height: 11px;
-    }
-
-    .snowflake:nth-child(8) {
-        animation-duration: 10s;
-        animation-delay: -8s;
-        left: 80%;
-        width: 13px;
-        height: 13px;
-    }
-
-    .snowflake:nth-child(9) {
-        animation-duration: 6s;
-        animation-delay: -9s;
-        left: 90%;
-        width: 10px;
-        height: 10px;
-    }
-        ";
-        $pos = strpos($cssContent, "#plugin_log, #bin_logs, #singbox_log") + strlen("#plugin_log, #bin_logs, #singbox_log {");
-        $endPos = strpos($cssContent, "}", $pos);
-        
-        if ($pos !== false && $endPos !== false) {
-            $cssContent = substr_replace($cssContent, $snowEffectCSS, $endPos + 1, 0);
-        }
-    } else {
-        $cssContent .= "#snow-container { display: none; }\n";
-    }
-
-    $filePath = $_SERVER['DOCUMENT_ROOT'] . '/nekobox/assets/theme/transparent.css';
-    file_put_contents($filePath, $cssContent);
-    echo "<script>
-            alert('自定义主题已更新，名称为 transparent.css ！');
-            window.location.href = 'settings.php';
-          </script>";
-} else {
-    echo "<script>alert('没有接收到数据。');</script>";
-}
-
-if (isset($_GET['delete'])) {
-    $fileToDelete = $_GET['delete'];
-    $filePath = $picturesDir . $fileToDelete;
-    if (file_exists($filePath)) {
-        unlink($filePath);
-
-        $cssFilePath = $_SERVER['DOCUMENT_ROOT'] . '/nekobox/assets/theme/transparent.css';
-        if (file_exists($cssFilePath)) {
-            $cssContent = file_get_contents($cssFilePath);
-            $cssContent = preg_replace('/background-image: url\(.*?\);.*?background-size: cover;/', '', $cssContent);
-            file_put_contents($cssFilePath, $cssContent);
-        }
-
-        echo "<script>
-                alert('图片已删除！');
-                window.location.href = 'settings.php';
-              </script>";
-        exit;
-    }
-}
-?>
-
+    
