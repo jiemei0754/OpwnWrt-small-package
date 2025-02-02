@@ -791,6 +791,7 @@ $(document).ready(function() {
 </script>
 <h2 class="royal-style">NekoBox</h2>
 <style>
+
     .nav-pills .nav-link {
         background-color: transparent !important;
         color: inherit;
@@ -823,29 +824,81 @@ $(document).ready(function() {
        margin-bottom: 20px;
    }
 
-   @media (max-width: 1024px) {
-       td:first-child {
-       display: block;
-       width: 100%;
-       font-weight: bold;
-       margin-bottom: 5px;
+   @media (max-width: 768px) {
+      .section-container {
+         padding-left: 15px;
+         padding-right: 15px;
+      }
+   }
+
+   @media (max-width: 768px) {
+      tr {
+          margin-bottom: 15px;
+          display: block;
+      }
+   }
+
+@media (max-width: 767px) {
+    .section-container .table {
+        display: block;
+        width: 100%;
     }
-    
-   td:last-child {
-       display: block;
-       width: 100%;
-   }
 
-   .btn-group .btn {
-       font-size: 0.475rem;
-       white-space: nowrap;
-       padding: 0.375rem 0.5rem;
-   }
+    .section-container .table tbody,
+    .section-container .table thead,
+    .section-container .table tr {
+        display: block;
+    }
 
-   tr {
-       margin-bottom: 15px;
-       display: block;
-   }
+    .section-container .table td {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+    }
+
+    .section-container .table td:first-child {
+        font-weight: bold;
+        background-color: #f8f9fa;
+    }
+
+    .section-container .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .section-container .form-select,
+    .section-container .form-control,
+    .section-container .input-group {
+        width: 100%;
+    }
+
+    .section-container .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+    .section-container .table td {
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-container .table td:first-child {
+        background-color: #f0f0f0;
+        font-size: 1.1em;
+    }
+
+    .section-container .btn {
+        border-radius: 5px;
+    }
+
+    .section-container .btn-group {
+        gap: 15px;
+    }
 }
 
 </style>
@@ -853,7 +906,7 @@ $(document).ready(function() {
    <table class="table table-borderless mb-2">
        <tbody>
            <tr>
-               <td style="width:150px">运行状态</td>
+               <td style="width:150px; line-height: 2;"><i data-feather="activity"></i> 运行状态</td>
                <td class="d-grid">
                    <div class="btn-group w-100" role="group" aria-label="ctrl">
                        <?php
@@ -873,7 +926,7 @@ $(document).ready(function() {
                </td>
            </tr>
             <tr>
-               <td style="width:150px">Mihomo 控制</td>
+               <td style="width:150px; line-height: 2;"><i data-feather="box"></i> Mihomo</td>
                <td class="d-grid">
                    <form action="index.php" method="post" style="display: inline-block; width: 100%; margin-bottom: 10px;">
                        <div class="form-group">
@@ -902,7 +955,7 @@ $(document).ready(function() {
                </td>
            </tr>
            <tr>
-               <td style="width:150px">Sing-box 控制</td>
+               <td style="width:150px; line-height: 2;"><i data-feather="codesandbox"></i> Singbox</td>
                <td class="d-grid">
                    <form action="index.php" method="post">
                        <div class="input-group mb-2">
@@ -923,7 +976,7 @@ $(document).ready(function() {
                </td>
            </tr>
            <tr>
-               <td style="width:150px">运行模式</td>
+               <td style="width:150px; line-height: 2;"><i data-feather="settings"></i> 运行模式</td>
                <td class="d-grid">
                    <?php
                    $mode_placeholder = '';
@@ -940,6 +993,37 @@ $(document).ready(function() {
            </tr>
        </tbody>
    </table>
+
+<div class="modal fade" id="singboxModal" tabindex="-1" aria-labelledby="singboxModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="singboxModalLabel">Sing-box 启动提示</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>如遇启动失败，请前往文件管理 ⇨ 更新数据库 ⇨ 下载 cache.db 缓存数据。</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        var lastShown = localStorage.getItem('singboxModalLastShown');
+        var currentTime = new Date().getTime();
+
+        if (!lastShown || (currentTime - lastShown) > 12 * 60 * 60 * 1000) {
+            $('#singboxModal').modal('show');  
+        }
+
+        localStorage.setItem('singboxModalLastShown', currentTime);
+    });
+</script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const savedConfig = localStorage.getItem("configSelection");
@@ -988,23 +1072,23 @@ window.onload = function() {
    <table class="table table-borderless rounded-4 mb-2">
        <tbody>
            <tr>
-               <td style="width:150px">系统信息</td>
+               <td style="width:150px"><i data-feather="cpu"></i> 系统信息</td>
                <td id="systemInfo"></td>
            </tr>
            <tr>
-               <td style="width:150px">内存</td>
+               <td style="width:150px"><i data-feather="database"></i> 系统内存</td>
                <td id="ramUsage"></td>
            </tr>
            <tr>
-               <td style="width:150px">平均负载</td>
+               <td style="width:150px"><i data-feather="zap"></i> 平均负载</td>
                <td id="cpuLoad"></td>
            </tr>
            <tr>
-               <td style="width:150px">运行时间</td>
+               <td style="width:150px"><i data-feather="clock"></i> 运行时间</td>
                <td id="uptime"></td>
            </tr>
            <tr>
-               <td style="width:150px">流量统计</td>
+               <td style="width:150px"><i data-feather="bar-chart-2"></i> 流量统计</td>
                <td>⬇️ <span id="downtotal"></span> | ⬆️ <span id="uptotal"></span></td>
            </tr>
        </tbody>
@@ -1072,8 +1156,33 @@ window.onload = function() {
     .rotated {
         transform: rotate(180deg); 
     }
-</style>
 
+
+    .form-inline {
+        display: inline-block;  
+    }
+
+    @media (max-width: 767px) {
+        .form-inline {
+            display: flex;         
+            flex-wrap: nowrap;     
+            justify-content: center; 
+            gap: 5px;         
+        }
+
+        .form-check-inline, .btn {
+            font-size: 10px;      
+        }
+    }
+
+    @media (max-width: 767px) {
+        #logTabs .nav-item {
+            display: block;  
+            width: 100%;     
+        }
+    }
+
+</style>
 <h2 class="text-center">日志</h2>
 <ul class="nav nav-pills mb-3" id="logTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -1086,16 +1195,15 @@ window.onload = function() {
         <a class="nav-link" id="singboxLogTab" data-bs-toggle="pill" href="#singboxLog" role="tab" aria-controls="singboxLog" aria-selected="false">Sing-box 日志</a>
     </li>
 </ul>
-
 <div class="tab-content" id="logTabsContent">
     <div class="tab-pane fade" id="pluginLog" role="tabpanel" aria-labelledby="pluginLogTab">
         <div class="card log-card">
             <div class="card-body">
-                <pre id="plugin_log" class="log-container form-control" style="resize: vertical; overflow: auto; height: 350px; white-space: pre-wrap;" contenteditable="true"></pre>
+                <pre id="plugin_log" class="log-container form-control" style="resize: vertical; overflow: auto; height: 370px; white-space: pre-wrap;" contenteditable="true"></pre>
             </div>
             <div class="card-footer text-center">
                 <form action="index.php" method="post">
-                    <button type="submit" name="clear_plugin_log" class="btn btn-danger">🗑️ 清空日志</button>
+                    <button type="submit" name="clear_plugin_log" class="btn btn-danger"><i class="bi bi-trash"></i> 清空日志</button>
                 </form>
             </div>
         </div>
@@ -1104,11 +1212,11 @@ window.onload = function() {
     <div class="tab-pane fade" id="mihomoLog" role="tabpanel" aria-labelledby="mihomoLogTab">
         <div class="card log-card">
             <div class="card-body">
-                <pre id="bin_logs" class="log-container form-control" style="resize: vertical; overflow: auto; height: 350px; white-space: pre-wrap;" contenteditable="true"></pre>
+                <pre id="bin_logs" class="log-container form-control" style="resize: vertical; overflow: auto; height: 370px; white-space: pre-wrap;" contenteditable="true"></pre>
             </div>
             <div class="card-footer text-center">
                 <form action="index.php" method="post">
-                    <button type="submit" name="neko" value="clear" class="btn btn-danger">🗑️ 清空日志</button>
+                    <button type="submit" name="neko" value="clear" class="btn btn-danger"><i class="bi bi-trash"></i> 清空日志</button>
                 </form>
             </div>
         </div>
@@ -1117,17 +1225,51 @@ window.onload = function() {
     <div class="tab-pane fade" id="singboxLog" role="tabpanel" aria-labelledby="singboxLogTab">
         <div class="card log-card">
             <div class="card-body">
-                <pre id="singbox_log" class="log-container form-control" style="resize: vertical; overflow: auto; height: 350px; white-space: pre-wrap;" contenteditable="true"></pre>
+                <pre id="singbox_log" class="log-container form-control" style="resize: vertical; overflow: auto; height: 370px; white-space: pre-wrap;" contenteditable="true"></pre>
             </div>
             <div class="card-footer text-center">
-                <form action="index.php" method="post" class="d-inline-block">
+                <form action="index.php" method="post" class="form-inline">
                     <div class="form-check form-check-inline mb-2">
                         <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
                         <label class="form-check-label" for="autoRefresh">自动刷新</label>
                     </div>
-                    <button type="submit" name="clear_singbox_log" class="btn btn-danger">🗑️ 清空日志</button>
-                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#cronModal">⏰ 定时重启</button>
+                    <button type="submit" name="clear_singbox_log" class="btn btn-danger me-2"><i class="bi bi-trash"></i> 清空日志</button>
+                    <button type="button" class="btn btn-primary me-2" data-toggle="modal" data-target="#cronModal"><i class="bi bi-clock"></i> 定时重启</button>
+                    <button id="showHelpButton" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#helpModal" type="button"><i class="bi bi-keyboard"></i> 键盘说明</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">键盘操作说明</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li><strong>鼠标左键:</strong> 双击打开播放器界面</li>
+                    <li><strong>F9键:</strong> 切换播放/暂停</li>
+                    <li><strong>上下箭头键:</strong> 切换上一首/下一首</li>
+                    <li><strong>左右箭头键:</strong> 快进/快退 10 秒</li>
+                    <li><strong>ESC键:</strong> 返回播放列表的第一首</li>
+                    <li><strong>F2键:</strong> 切换循环播放和顺序播放模式</li>
+                    <li><strong>F8键:</strong> 启动网站连通性检查</li>
+                    <li><strong>F4键:</strong> 开启天气信息播报</li>
+                    <li><strong>Ctrl + F6键:</strong> 启动/停止雪花动画 </li>
+                    <li><strong>Ctrl + F7键:</strong> 启动/停止方块灯光动画 </li>
+                    <li><strong>Ctrl + F10键:</strong> 启动/停止方块动画 </li>
+                    <li><strong>Ctrl + F11键:</strong> 启动/停止光点动画 </li>
+                    <li><strong>Ctrl + Shift + C键:</strong> 清空缓存</li>
+                    <li><strong>Ctrl + Shift + V键:</strong> 定制播放列表</li>
+                    <li><strong>Ctrl + Shift + X键:</strong> 设置城市</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
             </div>
         </div>
     </div>
