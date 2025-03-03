@@ -8,7 +8,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 16 * * 0"
+    - cron: "0 16 * * 0" # 北京时间每周一 0:00 AM 自动运行
   workflow_dispatch:
 
 jobs:
@@ -45,4 +45,4 @@ jobs:
       - name: 发送通知
         if: env.SERVERCHAN_SCKEY == 'true'
         run: |
-          curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=我亲爱的✨主人✨jianping0754：您同步OpenWrt_small-package上游仓库顺利完成了！💐" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
+          curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=我亲爱的✨主人✨jiemei0754：您同步OpenWrt_small-package上游仓库顺利完成了！💐" "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage"
