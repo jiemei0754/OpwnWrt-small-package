@@ -25,10 +25,22 @@ const callNikkiVersion = rpc.declare({
     expect: { '': {} }
 });
 
+const callNikkiProfile = rpc.declare({
+    object: 'luci.nikki',
+    method: 'profile',
+    expect: { '': {} }
+});
+
 const callNikkiUpdateSubscription = rpc.declare({
     object: 'luci.nikki',
     method: 'update_subscription',
     params: ['section_id'],
+    expect: { '': {} }
+});
+
+const callNikkiGetIdentifiers = rpc.declare({
+    object: 'luci.nikki',
+    method: 'get_identifiers',
     expect: { '': {} }
 });
 
@@ -50,6 +62,7 @@ const proxyProvidersDir = `${providersDir}/proxy`;
 const logDir = `/var/log/nikki`;
 const appLogPath = `${logDir}/app.log`;
 const coreLogPath = `${logDir}/core.log`;
+const debugLogPath = `${logDir}/debug.log`;
 const nftDir = `${homeDir}/nftables`;
 const reservedIPNFT = `${nftDir}/reserved_ip.nft`;
 const reservedIP6NFT = `${nftDir}/reserved_ip6.nft`;
@@ -64,6 +77,7 @@ return baseclass.extend({
     runDir: runDir,
     appLogPath: appLogPath,
     coreLogPath: coreLogPath,
+    debugLogPath: debugLogPath,
     runProfilePath: runProfilePath,
     reservedIPNFT: reservedIPNFT,
     reservedIP6NFT: reservedIP6NFT,
@@ -84,13 +98,19 @@ return baseclass.extend({
         return callNikkiVersion();
     },
 
+    profile: function () {
+        return callNikkiProfile();
+    },
+
     updateSubscription: function (section_id) {
         return callNikkiUpdateSubscription(section_id);
     },
 
     api: async function (method, path, query, body) {
-        const apiPort = uci.get('nikki', 'mixin', 'api_port');
-        const apiSecret = uci.get('nikki', 'mixin', 'api_secret');
+        const profile = await callNikkiProfile();
+        const apiListen = profile['external-controller'];
+        const apiSecret = profile['secret'] ?? '';
+        const apiPort = apiListen.substring(apiListen.lastIndexOf(':') + 1);
         const url = `http://${window.location.hostname}:${apiPort}${path}`;
         return request.request(url, {
             method: method,
@@ -100,10 +120,12 @@ return baseclass.extend({
         })
     },
 
-    openDashboard: function () {
-        const uiName = uci.get('nikki', 'mixin', 'ui_name');
-        const apiPort = uci.get('nikki', 'mixin', 'api_port');
-        const apiSecret = encodeURIComponent(uci.get('nikki', 'mixin', 'api_secret'));
+    openDashboard: async function () {
+        const profile = await callNikkiProfile();
+        const uiName = profile['external-ui-name'];
+        const apiListen = profile['external-controller'];
+        const apiSecret = profile['secret'] ?? '';
+        const apiPort = apiListen.substring(apiListen.lastIndexOf(':') + 1);
         const params = {
             host: window.location.hostname,
             hostname: window.location.hostname,
@@ -122,6 +144,10 @@ return baseclass.extend({
 
     updateDashboard: function () {
         return this.api('POST', '/upgrade/ui');
+    },
+
+    getIdentifiers: function () {
+        return callNikkiGetIdentifiers();
     },
 
     listProfiles: function () {
@@ -154,17 +180,5 @@ return baseclass.extend({
 
     debug: function () {
         return callNikkiDebug();
-    },
-
-    getUsers: function () {
-        return fs.lines('/etc/passwd').then(function (lines) {
-            return lines.map(function (line) { return line.split(/:/)[0] }).filter(function (user) { return user !== 'root' && user !== 'nikki' });
-        });
-    },
-
-    getGroups: function () {
-        return fs.lines('/etc/group').then(function (lines) {
-            return lines.map(function (line) { return line.split(/:/)[0] }).filter(function (group) { return group !== 'root' && group !== 'nikki' });
-        });
     },
 })
