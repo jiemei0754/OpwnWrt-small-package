@@ -567,14 +567,14 @@ http.setfilehandler(
                 local extracted_dir = "/tmp/easytier-linux-*/"
                 os.execute("mv " .. extracted_dir .. "easytier-cli /tmp/easytier-cli")
                 os.execute("mv " .. extracted_dir .. "easytier-core /tmp/easytier-core")
-		os.execute("mv " .. extracted_dir .. "easytier-core /tmp/easytier-web")
+		os.execute("mv " .. extracted_dir .. "easytier-web-embed /tmp/easytier-web-embed")
                if nixio.fs.access("/tmp/easytier-cli") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-cli上传成功，重启一次插件才生效")
                 end
                if nixio.fs.access("/tmp/easytier-core") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-core上传成功，重启一次插件才生效")
                 end
-		if nixio.fs.access("/tmp/easytier-web") then
+		if nixio.fs.access("/tmp/easytier-web-embed") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-web上传成功，重启一次插件才生效")
                 end
                end
@@ -584,20 +584,20 @@ http.setfilehandler(
 		local extracted_dir = "/tmp/easytier-linux-*/"
                 os.execute("mv " .. extracted_dir .. "easytier-cli /tmp/easytier-cli")
                 os.execute("mv " .. extracted_dir .. "easytier-core /tmp/easytier-core")
-		os.execute("mv " .. extracted_dir .. "easytier-core /tmp/easytier-web")
+		os.execute("mv " .. extracted_dir .. "easytier-web-embed /tmp/easytier-web-embed")
                if nixio.fs.access("/tmp/easytier-cli") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-cli上传成功，重启一次插件才生效")
                 end
                if nixio.fs.access("/tmp/easytier-core") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-core上传成功，重启一次插件才生效")
                 end
-		if nixio.fs.access("/tmp/easytier-web") then
+		if nixio.fs.access("/tmp/easytier-web-embed") then
                     um.value = um.value .. "\n" .. translate("-程序/tmp/easytier-web上传成功，重启一次插件才生效")
                 end
                end
                 os.execute("chmod +x /tmp/easytier-core")
                 os.execute("chmod +x /tmp/easytier-cli") 
-		os.execute("chmod +x /tmp/easytier-web")
+		os.execute("chmod +x /tmp/easytier-web-embed")
         end
     end
 )
@@ -625,28 +625,29 @@ end
 db_path = s:option(Value, "db_path", translate("数据库文件路径"),
 	translate(" sqlite3 数据库文件路径, 用于保存所有数据。（ -d 参数）"))
 db_path.default = "/etc/easytier/et.db"
-db_path:depends("enabled", "1")
 
 web_protocol = s:option(ListValue, "web_protocol", translate("监听协议"),
 	translate("配置服务器的监听协议，用于被 easytier-core 连接。（ -p 参数）"))
 web_protocol.default = "udp"
 web_protocol:value("udp",translate("UDP"))
 web_protocol:value("tcp",translate("TCP"))
-web_protocol:depends("enabled", "1")
 
 web_port = s:option(Value, "web_port", translate("服务端口"),
 	translate("配置服务器的监听端口，用于被 easytier-core 连接。（ -c 参数）"))
 web_port.datatype = "range(1,65535)"
 web_port.placeholder = "22020"
 web_port.default = "22020"
-web_port:depends("enabled", "1")
 
 api_port = s:option(Value, "api_port", translate("API端口"),
 	translate("restful 服务器的监听端口，作为 ApiHost 并被 web 前端使用。（ -a 参数）"))
 api_port.datatype = "range(1,65535)"
 api_port.placeholder = "11211"
 api_port.default = "11211"
-api_port:depends("enabled", "1")
+
+html_port = s:option(Value, "html_port", translate("web界面端口"),
+	translate("web dashboard 服务器的前端监听端口，留空不启用。（ -l 参数）"))
+html_port.datatype = "range(1,65535)"
+html_port.placeholder = "11210"
 
 weblog = s:option(ListValue, "weblog", translate("程序日志"),
 	translate("运行日志在/tmp/easytierweb.log,可在上方日志查看<br>若启动失败，请前往 状态- 系统日志 查看具体启动失败日志<br>详细程度：警告<信息<调试<跟踪"))
@@ -657,6 +658,5 @@ weblog:value("warn",translate("警告"))
 weblog:value("info",translate("信息"))
 weblog:value("debug",translate("调试"))
 weblog:value("trace",translate("跟踪"))
-weblog:depends("enabled", "1")
 
 return m
