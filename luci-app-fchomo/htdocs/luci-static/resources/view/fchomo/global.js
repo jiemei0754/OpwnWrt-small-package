@@ -551,6 +551,26 @@ return view.extend({
 		so = ss.option(form.Value, 'tls_key_path', _('API TLS private key path'));
 		so.datatype = 'file';
 		so.value('/etc/ssl/acme/example.key');
+
+		so = ss.option(hm.GenText, 'tls_ech_key', _('API ECH key'));
+		const tls_ech_cfg = 'tls_ech_cfg';
+		so.placeholder = '-----BEGIN ECH KEYS-----\nACATwY30o/RKgD6hgeQxwrSiApLaCgU+HKh7B6SUrAHaDwBD/g0APwAAIAAgHjzK\nmadSJjYQIf9o1N5GXjkW4DEEeb17qMxHdwMdNnwADAABAAEAAQACAAEAAwAIdGVz\ndC5jb20AAA==\n-----END ECH KEYS-----';
+		so.hm_placeholder = 'public-sni.my.server';
+		so.cols = 30
+		so.rows = 2;
+		so.hm_options = {
+			type: 'ech-keypair',
+			params: '',
+			result: {
+				ech_key: so.option,
+				ech_cfg: tls_ech_cfg
+			}
+		}
+
+		so = ss.option(form.Value, 'tls_ech_cfg', _('API ECH config'),
+			_('This ECH parameter needs to be added to the SVCB/HTTPS record of the domain.') + '</br/>' +
+			_('And need to add an A/AAAA record for "public-sni.my.server".'));
+		so.placeholder = 'AEn+DQBFKwAgACABWIHUGj4u+PIggYXcR5JF0gYk3dCRioBW8uJq9H4mKAAIAAEAAQABAANAEnB1YmxpYy50bHMtZWNoLmRldgAA';
 		/* TLS END */
 
 		/* API START */
@@ -578,7 +598,7 @@ return view.extend({
 
 		so = ss.option(form.DynamicList, 'external_controller_cors_allow_origins', _('CORS Allow origins'),
 			_('CORS allowed origins, <code>*</code> will be used if empty.'));
-		so.placeholder = 'https://yacd.metacubex.one';
+		so.placeholder = 'https://board.zash.run.place';
 
 		so = ss.option(form.Flag, 'external_controller_cors_allow_private_network', _('CORS Allow private network'),
 			_('Allow access from private network.</br>' +
@@ -659,6 +679,9 @@ return view.extend({
 		/* Experimental settings */
 		o = s.taboption('experimental', form.SectionValue, '_experimental', form.NamedSection, 'experimental', 'fchomo', null);
 		ss = o.subsection;
+
+		so = ss.option(form.Flag, 'skip_safe_path_check', _('Disable safe path check'));
+		so.default = so.disabled;
 
 		so = ss.option(form.Flag, 'quic_go_disable_gso', _('Disable GSO of quic-go'));
 		so.default = so.disabled;
