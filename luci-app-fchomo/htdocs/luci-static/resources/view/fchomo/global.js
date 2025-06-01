@@ -553,9 +553,8 @@ return view.extend({
 		so.value('/etc/ssl/acme/example.key');
 
 		so = ss.option(hm.GenText, 'tls_ech_key', _('API ECH key'));
-		const tls_ech_cfg = 'tls_ech_cfg';
 		so.placeholder = '-----BEGIN ECH KEYS-----\nACATwY30o/RKgD6hgeQxwrSiApLaCgU+HKh7B6SUrAHaDwBD/g0APwAAIAAgHjzK\nmadSJjYQIf9o1N5GXjkW4DEEeb17qMxHdwMdNnwADAABAAEAAQACAAEAAwAIdGVz\ndC5jb20AAA==\n-----END ECH KEYS-----';
-		so.hm_placeholder = 'public-sni.my.server';
+		so.hm_placeholder = 'outer-sni.any.domain';
 		so.cols = 30
 		so.rows = 2;
 		so.hm_options = {
@@ -563,13 +562,35 @@ return view.extend({
 			params: '',
 			result: {
 				ech_key: so.option,
-				ech_cfg: tls_ech_cfg
+				ech_cfg: 'tls_ech_cfg'
 			}
+		}
+		so.renderWidget = function(section_id, option_index, cfgvalue) {
+			let node = hm.TextValue.prototype.renderWidget.apply(this, arguments);
+			const cbid = this.cbid(section_id) + '._outer_sni';
+
+			node.appendChild(E('div',  { 'class': 'control-group' }, [
+				E('input', {
+					id: cbid,
+					class: 'cbi-input-text',
+					style: 'width: 10em',
+					placeholder: this.hm_placeholder
+				}),
+				E('button', {
+					class: 'cbi-button cbi-button-add',
+					click: ui.createHandlerFn(this, function() {
+						this.hm_options.params = document.getElementById(cbid).value;
+
+						return hm.handleGenKey.call(this, this.hm_options);
+					})
+				}, [ _('Generate') ])
+			]));
+
+			return node;
 		}
 
 		so = ss.option(form.Value, 'tls_ech_cfg', _('API ECH config'),
-			_('This ECH parameter needs to be added to the SVCB/HTTPS record of the domain.') + '</br/>' +
-			_('And need to add an A/AAAA record for "public-sni.my.server".'));
+			_('This ECH parameter needs to be added to the HTTPS record of the domain.'));
 		so.placeholder = 'AEn+DQBFKwAgACABWIHUGj4u+PIggYXcR5JF0gYk3dCRioBW8uJq9H4mKAAIAAEAAQABAANAEnB1YmxpYy50bHMtZWNoLmRldgAA';
 		/* TLS END */
 
