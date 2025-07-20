@@ -7,19 +7,29 @@
  *
  *  Licensed to the public under the Apache License 2.0
  */
-function pdopenbar() {
-    document.getElementById("header-bar-left").style.width = "300px";
-    document.getElementById("header-bar-left").style.display = "block";
-    document.getElementById("header-bar-right").style.width = "0";
-    document.getElementById("header-bar-right").style.display = "none";
+ 
+ function pdopenbar() {
+    var leftBar = document.getElementById("header-bar-left");
+    var rightBar = document.getElementById("header-bar-right");
+    
+    leftBar.style.cssText = "width:300px;display:block !important";
+    rightBar.style.cssText = "width:0;display:none !important";
 }
 
 function pdclosebar() {
-    document.getElementById("header-bar-left").style.display = "none";
-    document.getElementById("header-bar-left").style.width = "0";
-    document.getElementById("header-bar-right").style.display = "block";
-    document.getElementById("header-bar-right").style.width = "50px";
+    var leftBar = document.getElementById("header-bar-left");
+    var rightBar = document.getElementById("header-bar-right");
+    
+    leftBar.style.cssText = "width:0;display:none !important";
+    rightBar.style.cssText = "width:50px;display:block !important";
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'ArrowLeft') pdopenbar();
+        if (e.ctrlKey && e.key === 'ArrowRight') pdclosebar();
+    });
+});
 
 function initScrollContainers() {
     document.querySelectorAll('.cbi-section, .mainmenu').forEach(section => {
