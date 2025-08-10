@@ -1,3 +1,48 @@
+<?php
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clearNekoTmpDir') {
+    $nekoDir = '/tmp/neko';
+    $response = [
+        'success' => false,
+        'message' => ''
+    ];
+
+    if (is_dir($nekoDir)) {
+        if (deleteNekoTmpDirectory($nekoDir)) {
+            $response['success'] = true;
+            $response['message'] = 'Directory cleared successfully.';
+        } else {
+            $response['message'] = 'Failed to delete the directory.';
+        }
+    } else {
+        $response['message'] = 'The directory does not exist.';
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
+}
+
+function deleteNekoTmpDirectory($dir) {
+    if (!file_exists($dir)) {
+        return true;
+    }
+    if (!is_dir($dir)) {
+        return unlink($dir);
+    }
+
+    foreach (scandir($dir) as $item) {
+        if ($item === '.' || $item === '..') {
+            continue;
+        }
+
+        if (!deleteNekoTmpDirectory($dir . DIRECTORY_SEPARATOR . $item)) {
+            return false;
+        }
+    }
+
+    return rmdir($dir);
+}
+?>
 <style>
 .modal {
         opacity: 0;
@@ -7,48 +52,6 @@
 .modal.show {
         opacity: 1;
         visibility: visible;
-}
-
-.log-message.alert {
-	position: fixed !important;
-	top: 50% !important;
-	left: 50% !important;
-	transform: translate(-50%, -50%) !important;
-	z-index: 9999 !important;
-	max-width: 90vw !important;
-	padding: 1rem 2rem !important;
-	font-size: 1.1rem !important;
-	border-radius: 8px !important;
-	opacity: 1 !important;
-	color: #000 !important;
-	white-space: pre-wrap !important;
-	word-wrap: break-word !important;
-	overflow-wrap: break-word !important;
-	line-height: 1.4 !important;
-	pointer-events: none !important;
-}
-
-.log-message.alert-danger {
-	background-color: #f8d7da;
-	color: #842029;
-	box-shadow: 0 0 15px rgba(220, 53, 69, 0.7);
-}
-
-.log-message.alert-success {
-	background-color: #d1e7dd;
-	color: #0f5132;
-	box-shadow: 0 0 15px rgba(25, 135, 84, 0.7);
-}
-
-.log-message {
-	opacity: 0;
-	pointer-events: none;
-	transition: opacity 0.5s ease-in-out;
-}
-
-.log-message.show {
-	opacity: 1;
-	pointer-events: auto;
 }
 
 #theme-loader {
@@ -114,6 +117,138 @@
 		transform: scale(1.1) translateY(-10px);
 	}
 }
+
+.navbar {
+	background-color: transparent;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: none;
+	padding: 0.8rem 1.2rem;
+	border-radius: 0;
+	box-shadow: none;
+	color: var(--text-primary);
+	transition: var(--transition);
+}
+
+.navbar-brand {
+	font-size: 1.5rem !important;
+	font-weight: 900 !important;
+	color: var(--accent-color) !important;
+	text-decoration: none;
+	transition: var(--transition);
+}
+
+.navbar-brand:hover {
+	color: var(--accent-color) !important;
+}
+
+.navbar .nav-link {
+	color: var(--text-primary) !important;
+	padding: 0.5rem 1rem;
+	border-radius: var(--radius);
+	transition: var(--transition);
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-weight: 500;
+}
+
+.navbar .nav-link.active:hover,
+.navbar .nav-link:hover {
+	background-color: var(--item-hover-bg);
+	box-shadow: var(--item-hover-shadow);
+	color: #fff !important;
+}
+
+.navbar .nav-link.active {
+	color: var(--accent-color) !important;
+	font-weight: 600;
+}
+
+.navbar-toggler {
+	color: var(--accent-color) !important;
+	border: none;
+	background: transparent;
+	outline: none;
+}
+
+.navbar-toggler i {
+	color: var(--accent-color) !important;
+	font-size: 1.8rem;
+	transition: var(--transition);
+}
+
+.icon-btn-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.7rem !important;
+	justify-content: flex-start;
+}
+
+.icon-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	width: 2rem !important;
+	height: 2rem !important;
+	padding: 0 !important;
+	border-radius: 1rem !important;
+	font-size: 1rem !important;
+	line-height: 1 !important;
+	flex-shrink: 0;
+}
+
+.log-message.alert {
+	position: fixed;
+	left: 20px;
+	padding: 12px 16px;
+	background: rgb(45, 125, 55) !important;
+	color: #fff !important;
+	color: white;
+	border-radius: 8px;
+	z-index: 9999;
+	max-width: 370px;
+	font-size: 15px;
+	word-wrap: break-word;
+	line-height: 1.5;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	backdrop-filter: blur(2px);
+	transform: translateY(0);
+	opacity: 0;
+	animation: scrollUp 12s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+	display: inline-block;
+	margin-bottom: 10px;
+	transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes scrollUp {
+	0% {
+		top: 90%;
+		opacity: 0;
+	}
+
+	20% {
+		opacity: 1;
+	}
+
+	80% {
+		top: 50%;
+		opacity: 1;
+	}
+
+	100% {
+		top: 45%;
+		opacity: 0;
+	}
+}
+
+.white-text-table,
+.white-text-table td,
+.white-text-table input {
+	color: var(--text-primary) !important;
+}
 </style>
 
 <div id="theme-loader" style="display: none;">
@@ -126,21 +261,88 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const loader = document.getElementById("theme-loader");
+  const MAX_WAIT_TIME = 15000;
 
   document.querySelectorAll("form").forEach(form => {
-    form.addEventListener("submit", () => {
+    form.addEventListener("submit", (e) => {
+      if (e.submitter?.classList.contains('cancel-btn') || 
+         form.classList.contains('no-loader')) return;
+      
       if (loader) {
         loader.style.display = "flex";
+        setTimeout(() => {
+          loader.style.opacity = "0";
+          setTimeout(() => {
+            loader.style.display = "none";
+            loader.style.opacity = "1";
+          }, 600);
+        }, MAX_WAIT_TIME);
       }
     });
   });
 });
 </script>
+<script>
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.btn-refresh-page')) {
+    location.reload();
+  }
+});
+</script>
+<div class="modal fade" id="portModal" tabindex="-1" aria-labelledby="portModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <form id="portForm" method="POST" action="./save_ports.php" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="portModalLabel" data-translate="portInfoTitle">Port Information</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered table-striped text-center align-middle w-100 mb-0 white-text-table">
+          <thead class="table-dark">
+            <tr>
+              <th style="width: 20%;" data-translate="componentName">Component Name</th>
+              <th style="width: 20%;">socks-port</th>
+              <th style="width: 20%;">mixed-port</th>
+              <th style="width: 13%;">redir-port</th>
+              <th style="width: 13%;">port</th>
+              <th style="width: 14%;">tproxy-port</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mihomo</td>
+              <td><input type="number" class="form-control text-center" name="mihomo_socks" value="<?= htmlspecialchars($neko_cfg['socks']) ?>"></td>
+              <td><input type="number" class="form-control text-center" name="mihomo_mixed" value="<?= htmlspecialchars($neko_cfg['mixed']) ?>"></td>
+              <td><input type="number" class="form-control text-center" name="mihomo_redir" value="<?= htmlspecialchars($neko_cfg['redir']) ?>"></td>
+              <td><input type="number" class="form-control text-center" name="mihomo_port" value="<?= htmlspecialchars($neko_cfg['port']) ?>"></td>
+              <td><input type="number" class="form-control text-center" name="mihomo_tproxy" value="<?= htmlspecialchars($neko_cfg['tproxy']) ?>"></td>
+            </tr>
+            <tr>
+              <td>Sing-box</td>
+              <td><input type="number" class="form-control text-center" name="singbox_http" value="<?= htmlspecialchars($http_port) ?>"></td>
+              <td><input type="number" class="form-control text-center" name="singbox_mixed" value="<?= htmlspecialchars($mixed_port) ?>"></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="text-danger text-center fw-bold mt-3 mb-1" data-translate="portChangeNotice">
+          Port changes will take effect after restarting the service.
+        </div>
+      </div>
+      <div class="modal-footer justify-content-end">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-translate="closeButton">Close</button>
+        <button type="submit" class="btn btn-primary" data-translate="save">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-<?php include './language.php'; include './cfg.php'; ?>
+<?php include './language.php'; include './cfg.php'; $current = basename($_SERVER['PHP_SELF']); ?>
 <html lang="<?php echo $currentLang; ?>">
 <div class="modal fade" id="langModal" tabindex="-1" aria-labelledby="langModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="langModalLabel" data-translate="select_language">Select Language</h5>
@@ -170,7 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <?php
 $default_url = 'https://raw.githubusercontent.com/Thaolga/Rules/main/music/songs.txt';
-$file_path = __DIR__ . '/url_config.txt'; 
+$file_path = __DIR__ . '/lib/url_config.txt'; 
 $message = '';
 
 if (!file_exists($file_path)) {
@@ -436,7 +638,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <img id="flagIcon" src="https://flagcdn.com/w20/cn.png" class="flag-icon" alt="Country Flag">
                 </div>
             </button>
-            <button class="panel-btn" onclick="window.open('./filekit.php', '_blank')">
+            <button class="panel-btn" onclick="window.open('./monaco.php', '_blank')">
                 <div class="btn-icon">
                     <i class="bi bi-file-earmark"></i>
                 </div>
@@ -561,7 +763,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-info btn-sm" id="lyricsToggle"><i class="bi bi-chevron-down" id="lyricsIcon"></i></button>
+                <button class="btn btn-info" id="lyricsToggle"><i class="bi bi-chevron-down" id="lyricsIcon"></i></button>
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-translate="cancel">Cancel</button>
             </div>
         </div>
@@ -599,7 +801,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 9999;">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -616,6 +818,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const navbar = document.getElementById('navbarContent');
+    const isMobile = window.innerWidth < 992;
+
+    if (!isMobile) return;
+
+    const bsCollapse = new bootstrap.Collapse(navbar, {
+        toggle: false
+    });
+
+    const savedState = localStorage.getItem('navbar-expanded');
+    if (savedState === 'true') {
+        bsCollapse.show();
+    }
+
+    navbar.addEventListener('show.bs.collapse', function () {
+        localStorage.setItem('navbar-expanded', 'true');
+    });
+
+    navbar.addEventListener('hide.bs.collapse', function () {
+        localStorage.setItem('navbar-expanded', 'false');
+    });
+});
+</script>
+
+<script>
+function clearNekoTmpDir() {
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=clearNekoTmpDir'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(translations["tmp_neko_cleared"] || "The /tmp/neko directory has been cleared successfully.");
+        } else {
+            if (data.message === 'The directory does not exist.') {
+                alert(translations["tmp_neko_not_exist"] || "The /tmp/neko directory does not exist. No action was taken.");
+            } else {
+                alert('Failed to clear the /tmp/neko directory: ' + data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while trying to clear the /tmp/neko directory.');
+    });
+}
+</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -688,15 +944,12 @@ const currentLang = "<?php echo $currentLang; ?>";
 let translations = langData[currentLang] || langData['en'];
 
 document.addEventListener("DOMContentLoaded", () => {
-    const userLang = localStorage.getItem('language') || currentLang;
-
-    updateLanguage(userLang); 
-    updateFlagIcon(userLang);  
-    document.getElementById("langSelect").value = userLang; 
+    updateLanguage(currentLang); 
+    updateFlagIcon(currentLang);  
+    document.getElementById("langSelect").value = currentLang; 
 });
 
 function updateLanguage(lang) {
-    localStorage.setItem('language', lang); 
     translations = langData[lang] || langData['en'];  
 
     const translateElement = (el, attribute, property) => {
@@ -808,15 +1061,62 @@ function changeLanguage(lang) {
 </script>
 
 <script>
-const logMessages = document.querySelectorAll('.log-message');
+function manageNotifications() {
+    const messages = document.querySelectorAll('.log-message:not(.initialized)');
+    let basePosition = 20;
 
-logMessages.forEach(message => {
-  setTimeout(() => {
-    message.classList.remove('show');
-    setTimeout(() => {
-      message.remove();
-    }, 500);
-  }, 5000);
+    const iconPaths = {
+        error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+        warning: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+        info: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'
+    };
+
+    function generateIcon(type) {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#fff" d="${iconPaths[type] || iconPaths.info}"/></svg>`;
+        return `data:image/svg+xml;base64,${btoa(svg)}`;
+    }
+
+    messages.forEach((msg, index) => {
+        msg.classList.add('initialized');
+
+        const type = msg.dataset.type || (msg.classList.contains('error') ? 'error' : msg.classList.contains('warning') ? 'warning' : 'info');
+
+        const originalContent = msg.innerHTML;
+        msg.innerHTML = `
+            <div class="log-content">
+                <span class="log-icon" style="background-image:url('${generateIcon(type)}')"></span>
+                ${originalContent}
+                <button class="log-close-btn">&times;</button>
+            </div>
+        `;
+
+        msg.style.transform = `translateY(${index * 70}px)`;
+
+        setTimeout(() => {
+            msg.classList.add('show');
+
+            setTimeout(() => {
+                msg.classList.remove('show');
+                msg.classList.add('hiding');
+                
+                setTimeout(() => msg.remove(), 500);
+            }, 12000);
+        }, index * 150);
+
+        const closeBtn = msg.querySelector('.log-close-btn');
+        closeBtn.addEventListener('click', () => {
+            msg.classList.remove('show');
+            msg.classList.add('hiding');
+            setTimeout(() => msg.remove(), 500);
+        });
+    });
+}
+
+manageNotifications();
+
+new MutationObserver(manageNotifications).observe(document.body, {
+    childList: true,
+    subtree: true
 });
 </script>
 
@@ -1488,10 +1788,6 @@ let IP = {
 
                     <span id="toggle-ip" style="cursor: pointer; text-indent: 0.3ch; padding-top: 2px;" title="${translations['hide_ip']}">
                         <i class="bi ${isHidden ? 'bi-eye-slash' : 'bi-eye'}" style="font-size: 1.4rem; vertical-align: middle;"></i>  
-                    </span>
-
-                    <span class="control-toggle" style="cursor: pointer; display: inline-flex; align-items: center;" onclick="toggleControlPanel()" title="${translations['control_panel']}">
-                        <i class="bi bi-gear" style="font-size: 1.1rem; margin-left: 5px; vertical-align: middle;"></i>  
                     </span>
             `;
 
@@ -2947,11 +3243,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const box = document.getElementById('floatingLyrics');
 
   const savedState = localStorage.getItem('floatingLyricsVisible') === 'true';
-  box.classList.toggle('visible', savedState);
+  const savedLeft = localStorage.getItem('floatingLyricsLeft');
+  const savedTop = localStorage.getItem('floatingLyricsTop');
 
-  box.style.resize   = 'none';
+  box.classList.toggle('visible', savedState);
+  box.style.resize = 'none';
   box.style.overflow = 'auto';
   box.style.position = 'absolute';
+
+  if (savedLeft && savedTop) {
+    box.style.left = savedLeft;
+    box.style.top = savedTop;
+  } else {
+    box.style.left = '20px';
+    box.style.top = '20px';
+  }
 
   toggleBtns.forEach(btn => {
     btn.addEventListener('click', e => {
@@ -2983,13 +3289,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('mousemove', e => {
     if (!isDragging) return;
-    box.style.left = (e.clientX - offsetX) + 'px';
-    box.style.top  = (e.clientY - offsetY) + 'px';
+    updatePosition(e.clientX, e.clientY);
   });
 
   document.addEventListener('mouseup', () => {
-    isDragging = false;
+    if (isDragging) {
+      isDragging = false;
+      savePosition();
+    }
   });
+
+  let touchId = null;
+
+  box.addEventListener('touchstart', e => {
+    if (e.target.closest('.ctrl-btn')) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchId = touch.identifier;
+    offsetX = touch.clientX - box.offsetLeft;
+    offsetY = touch.clientY - box.offsetTop;
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (!touchId) return;
+    const touch = Array.from(e.touches).find(t => t.identifier === touchId);
+    if (!touch) return;
+    updatePosition(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (touchId) {
+      touchId = null;
+      savePosition();
+    }
+  });
+
+  function updatePosition(clientX, clientY) {
+    const newLeft = (clientX - offsetX) + 'px';
+    const newTop = (clientY - offsetY) + 'px';
+    box.style.left = newLeft;
+    box.style.top = newTop;
+  }
+
+  function savePosition() {
+    localStorage.setItem('floatingLyricsLeft', box.style.left);
+    localStorage.setItem('floatingLyricsTop', box.style.top);
+  }
 })();
 </script>
 
@@ -4831,7 +5176,6 @@ body {
 	background-attachment: fixed;
 }
 
-
 #playerModal.active {
 	display: flex;
 	animation: slideIn 0.3s ease forwards;
@@ -5000,7 +5344,24 @@ body {
 	padding: 10px;
 	border-radius: var(--radius);
 	background: var(--card-bg);
-	border: 1px solid var(--border-color);
+        box-shadow: 
+            inset 1px 1px 2px rgba(255, 255, 255, 0.1),
+            inset -1px -1px 2px rgba(0, 0, 0, 0.15),
+            inset 1px -1px 1px rgba(0, 0, 0, 0.08),
+            inset -1px 1px 1px rgba(0, 0, 0, 0.08);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+}
+
+.lyrics-container:hover,
+.playlist:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            inset 1px 1px 2px rgba(255, 255, 255, 0.1),
+            inset -1px -1px 2px rgba(0, 0, 0, 0.15),
+            inset 1px -1px 1px rgba(0, 0, 0, 0.08),
+            inset -1px 1px 1px rgba(0, 0, 0, 0.08),
+            0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .playlist-item {
@@ -5025,8 +5386,8 @@ body {
 
 #floatingLyrics {
 	position: fixed;
-	top: 2%;
-	right: 4.5%;
+	top: 1%;
+        left: 4.5%;
 	background: var(--bg-body);
 	padding: 15px 10px;
 	border-radius: 20px;
@@ -5328,7 +5689,7 @@ body {
 	color: white;
 	border-radius: 8px;
 	z-index: 9999;
-	max-width: 320px;
+	max-width: 370px;
 	font-size: 15px;
 	word-wrap: break-word;
 	line-height: 1.5;
@@ -5520,7 +5881,6 @@ body {
 		text-align: center;
 	}
 }
-
 
 .control-panel-overlay {
 	position: fixed;
@@ -5969,7 +6329,6 @@ h2#neko-title.neko-title-style {
 }
 
 .container-bg,
-.card,
 .modal-content,
 .table {
 	--bg-l: oklch(30% 0 0);
@@ -5984,13 +6343,273 @@ h2#neko-title.neko-title-style {
 }
 
 .card {
-	background: var(--card-bg);
-	border: 1px solid var(--border-color);
+	--card-padding: 1.25rem;
+	--card-border-width: 1px;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	background: var(--bg-container) !important;
+	border: var(--card-border-width) solid var(--border-color);
+	border-radius: var(--radius);
+	box-shadow: 0 2px 8px color-mix(in oklch, var(--border-color), transparent 70%);
+	transform: translateY(-2px);
+	transition: var(--transition);
+	overflow: hidden;
+}
+
+.card-body:hover,
+.card:hover {
+	transform: translateY(-2px);
+	z-index: 10;
+	box-shadow: 0 1px 1px oklch(0% 0 0 / 0.05),
+        0 4px 8px oklch(0% 0 0 / 0.1),
+        0 8px 16px oklch(0% 0 0 / 0.1);
 }
 
 .card-header {
-	background: var(--header-bg) !important;
-	border-bottom: 1px solid var(--border-color);
+	padding: calc(var(--card-padding) * 0.8) var(--card-padding);
+	background: var(--header-bg);
+	border-bottom: var(--card-border-width) solid var(--border-color);
+	font-weight: 600;
+	color: var(--text-primary);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.card-body {
+	padding: var(--card-padding);
+	flex: 1 1 auto;
+	color: var(--text-primary);
+	background: var(--bg-container);
+}
+
+.card-footer {
+	padding: calc(var(--card-padding) * 0.8) var(--card-padding);
+	background: var(--header-bg);
+	border-top: var(--card-border-width) solid var(--border-color);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.card-glass {
+	background: color-mix(in oklch, var(--card-bg), transparent 15%);
+	backdrop-filter: var(--glass-blur);
+	border-color: color-mix(in oklch, var(--border-color), white 30%);
+}
+
+.card-elevated {
+	--card-shadow-color: color-mix(in oklch, var(--border-color), black 30%);
+	box-shadow: 0 3px 6px var(--card-shadow-color),
+        0 8px 24px color-mix(in oklch, var(--card-shadow-color), transparent 70%);
+}
+
+.card-floating {
+	position: relative;
+	top: 0;
+	transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.card-floating:hover {
+	top: -4px;
+	box-shadow: 0 12px 28px color-mix(in oklch, var(--border-color), transparent 60%),
+        0 0 0 1px var(--accent-color);
+}
+
+.card-badge {
+	position: absolute;
+	top: -0.5rem;
+	right: 1rem;
+	background: var(--btn-danger-bg);
+	color: var(--text-primary);
+	padding: 0.25rem 0.75rem;
+	border-radius: calc(var(--radius) * 2);
+	font-size: 0.75rem;
+	font-weight: bold;
+	box-shadow: 0 2px 4px oklch(0% 0 0 / 0.2);
+	z-index: 1;
+}
+
+@media (max-width: 768px) {
+	.card {
+		--card-padding: 1rem;
+		border-radius: calc(var(--radius) * 0.8);
+	}
+
+	.card-elevated {
+		box-shadow: 0 2px 4px color-mix(in oklch, var(--border-color), transparent 70%),
+            0 4px 12px color-mix(in oklch, var(--border-color), transparent 80%);
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	.card {
+		--card-shadow-color: oklch(0% 0 0 / 0.4);
+	}
+
+	.card-glass {
+		background: color-mix(in oklch, var(--card-bg), transparent 20%);
+		border-color: color-mix(in oklch, var(--border-color), black 30%);
+	}
+}
+
+.log-content-container {
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius);
+	margin-bottom: 0.5rem;
+	overflow: hidden;
+	box-shadow: var(--item-hover-shadow);
+	transition: var(--transition);
+}
+
+.log-actions {
+	padding: 0.5rem 0;
+	background: var(--bg-container);
+	border-radius: 0 0 var(--radius) var(--radius);
+	display: flex;
+	justify-content: center;
+}
+
+.log-actions.multiple-actions {
+	padding: 0.5rem;
+	justify-content: center;
+}
+
+.log-action-group {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	width: auto;
+}
+
+.log-content-container:hover {
+	border-color: var(--accent-color);
+	box-shadow: 0 4px 16px color-mix(in oklch, var(--accent-color), transparent 85%);
+}
+
+.log-content-area {
+	display: block;
+	width: 100%;
+	height: 330px;
+	margin-top: 15px;
+	margin-left: 15px;
+	padding: 0.75rem;
+	margin: 0;
+	font-family: Consolas, "Courier New", monospace;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--text-primary);
+	background: var(--bg-container);
+	border: 0;
+	border-radius: 0;
+	resize: vertical;
+	white-space: pre-wrap;
+	overflow: auto;
+	box-shadow: inset 0 1px 3px oklch(0% 0 0 / 0.1);
+	transition: var(--transition);
+}
+
+.log-content-area:focus {
+	outline: none;
+	box-shadow: inset 0 1px 3px oklch(0% 0 0 / 0.15),
+        0 0 0 2px var(--accent-color);
+}
+
+.btn-clear-log {
+	color: #fff;
+	background: var(--btn-danger-bg);
+	border: 1px solid transparent;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.875rem;
+	border-radius: calc(var(--radius) / 2);
+	transition: var(--transition);
+}
+
+.btn-clear-log:hover {
+	color: #fff;
+	background: color-mix(in oklch, var(--btn-danger-bg), black 10%);
+	transform: translateY(-1px);
+}
+
+.btn-schedule {
+	color: #fff;
+	background: var(--btn-primary-bg);
+	border: 1px solid transparent;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.875rem;
+	border-radius: calc(var(--radius) / 2);
+	transition: var(--transition);
+}
+
+.btn-schedule:hover {
+	color: #fff;
+	background: var(--btn-primary-hover);
+	box-shadow: 0 2px 8px color-mix(in oklch, var(--accent-color), transparent 80%);
+}
+
+.form-check {
+	margin-bottom: 0;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.form-check-input {
+	width: 1.1em;
+	height: 1.1em;
+	margin: 0;
+	background-color: var(--bg-container);
+	border: 1px solid var(--border-color);
+	appearance: none;
+	-webkit-appearance: none;
+	transition: var(--transition);
+}
+
+.form-check-input:checked {
+	background-color: var(--accent-color);
+	border-color: var(--accent-color);
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+}
+
+.form-check-label {
+	color: var(--text-secondary);
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+@media (max-width: 768px) {
+	.log-content-container {
+		border-radius: calc(var(--radius) * 0.8);
+	}
+
+	.log-action-group {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+
+	.btn-clear-log,
+        .btn-schedule {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.form-check {
+		justify-content: center;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+	.log-content-area {
+		box-shadow: inset 0 1px 3px oklch(0% 0 0 / 0.3);
+	}
+
+	.form-check-input {
+		background-color: var(--bg-body);
+	}
 }
 
 .table {
@@ -6274,6 +6893,7 @@ thead.table-light th:not(:last-child)::after {
 	}
 }
 
+.alert,
 .alert.alert-info ul,
 .alert.alert-info ul li {
 	color: var(--text-primary) !important;
@@ -6297,7 +6917,6 @@ input.btn:focus {
 #logTabs .nav-link:hover {
 	color: var(--ocean-bg) !important;
 }
-
 
 svg.feather {
         width: 20px !important;
@@ -6323,26 +6942,32 @@ svg.feather:hover,
 
 * {
 	scrollbar-width: thin;
-	scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+	scrollbar-color: var(--accent-color) var(--header-bg);
 }
 
 *::-webkit-scrollbar {
 	width: 6px;
 	height: 6px;
-}
 
-*::-webkit-scrollbar-track {
 	background: transparent;
 }
 
+*::-webkit-scrollbar-track {
+	background: var(--header-bg);
+	border-radius: 3px;
+	margin: 4px 0;
+}
+
 *::-webkit-scrollbar-thumb {
-	background: var(--accent-color) !important;
-	border-radius: 4px;
+	background: var(--accent-color);
+	border-radius: 3px;
 	transition: background 0.3s ease;
+	min-height: 40px;
+	min-width: 40px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-	background: var(--accent-color) !important;
+	background: color-mix(in oklch, var(--accent-color), white 20%);
 }
 
 body {
@@ -6590,6 +7215,169 @@ input[type=range]::-ms-thumb {
 .btn-lg {
 	padding: 0.5rem 1rem;
 	font-size: 1.25rem;
+}
+
+.ace_search {
+	background: var(--bg-container) !important;
+	border: 1px solid var(--border-color) !important;
+	border-radius: var(--radius);
+	box-shadow: var(--item-hover-shadow);
+	padding: 8px 12px !important;
+	color: var(--text-primary);
+	backdrop-filter: var(--glass-blur);
+	transition: var(--transition);
+}
+
+.ace_search_form, .ace_replace_form {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.ace_search_field {
+	background: var(--card-bg) !important;
+	border: 1px solid var(--border-color) !important;
+	color: var(--text-primary) !important;
+	padding: 6px 12px !important;
+	border-radius: calc(var(--radius) - 4px) !important;
+	font-size: 14px !important;
+	min-width: 200px;
+	transition: var(--transition);
+}
+
+.ace_search_field:focus {
+	border-color: var(--accent-color) !important;
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-color), transparent 70%);
+}
+
+.ace_searchbtn {
+	background: var(--btn-primary-bg) !important;
+	color: white !important;
+	border: none !important;
+	border-radius: calc(var(--radius) - 4px) !important;
+	background-image: none !important;
+	padding: 6px 12px !important;
+	font-size: 13px !important;
+	cursor: pointer;
+	transition: var(--transition);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 60px;
+	filter: contrast(1.2) brightness(1.1);
+}
+
+.ace_searchbtn:hover {
+	background: var(--btn-primary-hover) !important;
+	color: white !important;
+}
+
+.ace_searchbtn.prev,
+.ace_searchbtn.next {
+	position: relative;
+}
+
+.ace_searchbtn.prev::before,
+.ace_searchbtn.next::before {
+	content: "";
+	font-size: 14px;
+	color: white !important;
+	filter: contrast(1.3);
+	display: inline-block;
+	line-height: 1;
+}
+
+.ace_searchbtn.prev::before {
+	content: "↑";
+}
+
+.ace_searchbtn.next::before {
+	content: "↓";
+}
+
+.ace_searchbtn .ace_icon,
+.ace_searchbtn::after {
+	display: none !important;
+	opacity: 0 !important;
+}
+
+.ace_searchbtn_close {
+	background: transparent !important;
+	color: var(--text-secondary) !important;
+	position: absolute;
+	right: 12px;
+	top: 12px;
+	cursor: pointer;
+	font-size: 16px;
+	transition: var(--transition);
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 3px;
+}
+
+.ace_searchbtn_close:hover {
+	color: white !important;
+	background: var(--btn-primary-bg) !important;
+}
+
+.ace_searchbtn_close::before {
+	content: "×";
+}
+
+.ace_search_options {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.ace_button {
+	background: var(--btn-primary-bg) !important;
+	color: white !important;
+	border: none !important;
+	border-radius: calc(var(--radius) - 4px) !important;
+	padding: 4px 8px !important;
+	font-size: 12px !important;
+	cursor: pointer;
+	transition: var(--transition);
+	filter: contrast(1.2);
+}
+
+.ace_button:hover {
+	background: var(--btn-primary-hover) !important;
+	color: white !important;
+}
+
+.ace_search_counter {
+	color: var(--text-secondary);
+	font-size: 12px;
+	margin-right: auto;
+}
+
+[action="toggleRegexpMode"] {
+	background: var(--btn-info-bg) !important;
+	color: white !important;
+}
+[action="toggleCaseSensitive"] {
+	background: var(--btn-warning-bg) !important;
+	color: white !important;
+}
+[action="toggleWholeWords"] {
+	background: var(--btn-success-bg) !important;
+	color: white !important;
+}
+[action="searchInSelection"] {
+	background: var(--ocean-bg) !important;
+	color: white !important;
+}
+[action="toggleReplace"] {
+	background: var(--lavender-bg) !important;
+	color: white !important;
 }
 
 #editorStatus {
