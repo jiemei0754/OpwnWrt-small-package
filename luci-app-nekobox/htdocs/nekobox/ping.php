@@ -1,4 +1,10 @@
 <?php
+$timezone = trim(shell_exec("uci get system.@system[0].zonename 2>/dev/null"));
+
+date_default_timezone_set($timezone ?: 'UTC');
+?>
+
+<?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clearNekoTmpDir') {
     $nekoDir = '/tmp/neko';
     $response = [
@@ -119,7 +125,6 @@ function deleteNekoTmpDirectory($dir) {
 }
 
 .navbar {
-	background-color: transparent;
 	backdrop-filter: none;
 	-webkit-backdrop-filter: none;
 	border: none;
@@ -138,6 +143,22 @@ function deleteNekoTmpDirectory($dir) {
 	transition: var(--transition);
 }
 
+.nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 2px;
+        background: var(--accent-color);
+        transition: width var(--transition-speed) ease;
+}
+
+.nav-link:hover::after {
+        width: 70%;
+}
+
 .navbar-brand:hover {
 	color: var(--accent-color) !important;
 }
@@ -151,13 +172,12 @@ function deleteNekoTmpDirectory($dir) {
 	align-items: center;
 	gap: 0.4rem;
 	font-weight: 500;
+        position: relative;
 }
 
 .navbar .nav-link.active:hover,
 .navbar .nav-link:hover {
-	background-color: var(--item-hover-bg);
-	box-shadow: var(--item-hover-shadow);
-	color: #fff !important;
+	color: var(--accent-color)  !important;
 }
 
 .navbar .nav-link.active {
@@ -249,6 +269,63 @@ function deleteNekoTmpDirectory($dir) {
 .white-text-table input {
 	color: var(--text-primary) !important;
 }
+
+.custom-tooltip {
+	position: fixed;
+	background: var(--accent-color);
+	color: #fff;
+	padding: 8px 12px;
+	border-radius: var(--radius);
+	font-size: 0.85rem;
+	pointer-events: none;
+	z-index: 10000;
+	white-space: nowrap;
+	max-width: 300px;
+	line-height: 1.4;
+	backdrop-filter: var(--glass-blur);
+	border: var(--glass-border);
+	box-shadow: 0 4px 20px color-mix(in oklch, var(--bg-container), black 85%),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+	opacity: 0;
+	transform: translateY(10px);
+	transition: opacity 0.2s ease-out,
+        transform 0.2s ease-out;
+}
+
+.custom-tooltip.show {
+	opacity: var(--glass-opacity);
+	transform: translateY(0);
+}
+
+.custom-tooltip::after {
+	content: '';
+	position: absolute;
+	top: -5px;
+	left: 50%;
+	transform: translateX(-50%) rotate(45deg);
+	width: 10px;
+	height: 10px;
+	background: inherit;
+	border-top: var(--glass-border);
+	border-left: var(--glass-border);
+	z-index: -1;
+}
+
+.custom-tooltip[data-position="top"]::after {
+	top: auto;
+	bottom: -5px;
+	border: none;
+	border-right: var(--glass-border);
+	border-bottom: var(--glass-border);
+}
+
+@media (max-width: 768px) {
+	.custom-tooltip {
+		max-width: 200px;
+		white-space: normal;
+		font-size: 0.8rem;
+	}
+}
 </style>
 
 <div id="theme-loader" style="display: none;">
@@ -282,13 +359,53 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
 <script>
-document.addEventListener('click', (e) => {
+document.addEventListener('DOMContentLoaded', () => {
+  const tooltip = document.createElement('div');
+  tooltip.className = 'custom-tooltip';
+  document.body.appendChild(tooltip);
+
+  document.querySelectorAll('[data-tooltip]').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      tooltip.textContent = el.getAttribute('data-tooltip');
+      tooltip.classList.add('show');
+
+      requestAnimationFrame(() => {
+        positionTooltip(e);
+      });
+    });
+
+    el.addEventListener('mousemove', e => {
+      positionTooltip(e);
+    });
+
+    el.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('show');
+    });
+  });
+
+  function positionTooltip(e) {
+    const spacing = 20;
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const targetRect = e.target.getBoundingClientRect();
+
+    const top = targetRect.bottom + spacing;
+    const left = targetRect.left + (targetRect.width - tooltipRect.width) / 2;
+
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+    tooltip.dataset.position = 'bottom';
+  }
+});
+
+document.addEventListener('click', e => {
   if (e.target.closest('.btn-refresh-page')) {
     location.reload();
   }
 });
 </script>
+
 <div class="modal fade" id="portModal" tabindex="-1" aria-labelledby="portModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <form id="portForm" method="POST" action="./save_ports.php" class="modal-content">
@@ -297,15 +414,15 @@ document.addEventListener('click', (e) => {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <table class="table table-bordered table-striped text-center align-middle w-100 mb-0 white-text-table">
-          <thead class="table-dark">
+        <table class="table table-light table-striped text-center align-middle w-100 mb-0 white-text-table">
+          <thead class="table-light">
             <tr>
-              <th style="width: 20%;" data-translate="componentName">Component Name</th>
-              <th style="width: 20%;">socks-port</th>
-              <th style="width: 20%;">mixed-port</th>
-              <th style="width: 13%;">redir-port</th>
-              <th style="width: 13%;">port</th>
-              <th style="width: 14%;">tproxy-port</th>
+              <th style="width: 20%;" class="text-center" data-translate="componentName">Component Name</th>
+              <th style="width: 16%;" class="text-center">socks-port</th>
+              <th style="width: 16%;" class="text-center">mixed-port</th>
+              <th style="width: 16%;" class="text-center">redir-port</th>
+              <th style="width: 16%;" class="text-center">port</th>
+              <th style="width: 16%;" class="text-center">tproxy-port</th>
             </tr>
           </thead>
           <tbody>
@@ -321,9 +438,9 @@ document.addEventListener('click', (e) => {
               <td>Sing-box</td>
               <td><input type="number" class="form-control text-center" name="singbox_http" value="<?= htmlspecialchars($http_port) ?>"></td>
               <td><input type="number" class="form-control text-center" name="singbox_mixed" value="<?= htmlspecialchars($mixed_port) ?>"></td>
-              <td>—</td>
-              <td>—</td>
-              <td>—</td>
+              <td><input type="text" class="form-control text-center" name="singbox_mixed" value="—" disabled></td>
+              <td><input type="text" class="form-control text-center" name="singbox_mixed" value="—" disabled></td>
+              <td><input type="text" class="form-control text-center" name="singbox_mixed" value="—" disabled></td>
             </tr>
           </tbody>
         </table>
@@ -535,7 +652,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="color" id="color-selector"
                    class="form-control form-control-color p-0"
                    value=" "
-                   data-translate-title="choose_color"
+                   data-tooltip="choose_color"
                    style="width: 36px; height: 36px; cursor: pointer;">
           </div>
           <div id="current-color-block"
@@ -566,12 +683,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="control-panel">
         <div class="panel-header">
             <h3><i class="bi bi-gear"></i> <span data-translate="control_panel_title">Control Panel</span></h3>
-            <button class="close-icon" onclick="toggleControlPanel()" data-translate-title="close">
+            <button class="close-icon" onclick="toggleControlPanel()" data-tooltip="close">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
         <div class="buttons-grid">
-            <button class="panel-btn" data-bs-toggle="modal" data-bs-target="#musicModal" data-translate-title="music_player">
+            <button class="panel-btn" data-bs-toggle="modal" data-bs-target="#musicModal" data-tooltip="music_player">
                 <div class="btn-icon">
                     <i class="bi bi-music-note-beamed"></i>
                 </div>
@@ -589,7 +706,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <small class="opacity-75" data-translate="color_desc">Customize interface colors</small>
                 </div>
             </button>
-            <button class="panel-btn" id="advancedColorBtn" data-translate-title="advanced_color_settings">
+            <button class="panel-btn" id="advancedColorBtn" data-tooltip="advanced_color_settings">
                 <div class="btn-icon">
                     <i class="bi bi-palette2"></i>
                 </div>
@@ -598,7 +715,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <small class="opacity-75" data-translate="advanced_color_desc">Professional color adjustments</small>
                 </div>
             </button>
-            <button class="panel-btn" id="clear-cache-btn" data-translate-title="clear_cache">
+            <button class="panel-btn" id="clear-cache-btn" data-tooltip="clear_cache">
                 <div class="btn-icon">
                     <i class="bi bi-trash"></i>
                 </div>
@@ -607,7 +724,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <small class="opacity-75" data-translate="cache_desc">Free up system resources</small>
                 </div>
             </button>
-            <button class="panel-btn" id="startCheckBtn" data-translate-title="start_check">
+            <button class="panel-btn" id="startCheckBtn" data-tooltip="start_check">
                 <div class="btn-icon">
                     <i class="bi bi-globe2"></i>
                 </div>
@@ -617,7 +734,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                </div>
                     <i class="bi bi-toggle-off" id="autoCheckIcon"  style="cursor: pointer; margin-left: 10px;"></i>
             </button>
-            <button class="panel-btn" id="openModalBtn" data-translate-title="open_animation">
+            <button class="panel-btn" id="openModalBtn" data-tooltip="open_animation">
                 <div class="btn-icon">
                     <i class="bi bi-sliders"></i>
                 </div>
@@ -647,7 +764,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <small class="opacity-75" data-translate="file_desc">Manage your files</small>
                 </div>
             </button>
-            <button class="panel-btn" id="translationToggleBtn" data-translate-title="enable">
+            <button class="panel-btn" id="translationToggleBtn" data-tooltip="enable">
                 <div class="btn-icon" id="translationToggleIcon">
                     <i class="bi bi-toggle-off"></i>
                 </div>
@@ -659,7 +776,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="action-row">
             <div class="color-picker">
-                <button class="btn btn-info ms-2" id="fontSwitchBtn" data-translate-title="toggle_font">
+                <button class="btn btn-info ms-2" id="fontSwitchBtn" data-tooltip="toggle_font">
                     <i id="fontSwitchIcon" class="fa-solid fa-font" style="color: white;"></i>
                 </button>
                 <label for="colorPicker" data-translate="component_bg_color">Component Background</label>
@@ -680,29 +797,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div id="floatingLyrics" style="display: none;">
     <div class="floating-controls">
-        <button class="ctrl-btn" onclick="changeTrack(-1, true)" data-translate-title="previous_track">
+        <button class="ctrl-btn" onclick="changeTrack(-1, true)" data-tooltip="previous_track">
             <i class="fas fa-backward"></i>
         </button>
-        <button class="ctrl-btn" id="floatingPlayBtn" onclick="togglePlay()" data-translate-title="play_pause">
+        <button class="ctrl-btn" id="floatingPlayBtn" onclick="togglePlay()" data-tooltip="play_pause">
             <i class="bi bi-play-fill"></i>
         </button>
-        <button class="ctrl-btn" onclick="changeTrack(1, true)" data-translate-title="next_track">
+        <button class="ctrl-btn" onclick="changeTrack(1, true)" data-tooltip="next_track">
             <i class="fas fa-forward"></i>
         </button>
         <button class="ctrl-btn" id="floatingRepeatBtn" onclick="toggleRepeat()">
             <i class="bi bi-arrow-repeat"></i>
         </button>
-        <button class="ctrl-btn" id="speedToggle" data-translate-title="playback_speed">
+        <button class="ctrl-btn" id="speedToggle" data-tooltip="playback_speed">
             <span id="speedLabel">1×</span>
         </button>
-        <button class="ctrl-btn" id="muteToggle" data-translate-title="volume">
+        <button class="ctrl-btn" id="muteToggle" data-tooltip="volume">
             <i class="bi bi-volume-up-fill"></i>
         </button>
         <button class="ctrl-btn" id="updatePlaylistBtn" onclick="updatePlaylist()" 
-                data-translate-title="update_playlist">
+                data-tooltip="update_playlist">
             <i class="fa fa-sync-alt"></i>
         </button>
-        <button id="toggleFloatingLyricsBtn" class="ctrl-btn toggleFloatingLyricsBtn" data-translate-title="toggle_floating_lyrics">
+        <button id="toggleFloatingLyricsBtn" class="ctrl-btn toggleFloatingLyricsBtn" data-tooltip="toggle_floating_lyrics">
             <i class="bi bi-display floatingIcon"></i>
         </button>
     </div>
@@ -734,25 +851,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span id="duration">0:00</span>
                 </div>          
                 <div class="controls d-flex justify-content-center gap-3 mt-4">
-                    <button class="control-btn toggleFloatingLyricsBtn" data-translate-title="toggle_floating_lyrics">
+                    <button class="control-btn toggleFloatingLyricsBtn" data-tooltip="toggle_floating_lyrics">
                         <i class="bi bi-display floatingIcon"></i>
                     </button>
                     <button class="control-btn" id="repeatBtn" onclick="toggleRepeat()">
                         <i class="bi bi-arrow-repeat"></i>
                     </button>
-                    <button class="control-btn" onclick="changeTrack(-1, true)" data-translate-title="previous_track">
+                    <button class="control-btn" onclick="changeTrack(-1, true)" data-tooltip="previous_track">
                         <i class="bi bi-caret-left-fill"></i>
                     </button>
-                    <button class="control-btn" id="playPauseBtn" onclick="togglePlay()" data-translate-title="play_pause">
+                    <button class="control-btn" id="playPauseBtn" onclick="togglePlay()" data-tooltip="play_pause">
                         <i class="bi bi-play-fill"></i>
                     </button>
-                    <button class="control-btn" onclick="changeTrack(1, true)" data-translate-title="next_track">
+                    <button class="control-btn" onclick="changeTrack(1, true)" data-tooltip="next_track">
                         <i class="bi bi-caret-right-fill"></i>
                     </button>
-                    <button class="control-btn" type="button" data-bs-toggle="modal" data-bs-target="#urlModal" data-translate-title="custom_playlist">
+                    <button class="control-btn" type="button" data-bs-toggle="modal" data-bs-target="#urlModal" data-tooltip="custom_playlist">
                         <i class="bi bi-music-note-list"></i>
                     </button>
-                    <button class="btn btn-volume position-relative" id="volumeToggle" data-translate-title="volume">
+                    <button class="btn btn-volume position-relative" id="volumeToggle" data-tooltip="volume">
                         <i class="bi bi-volume-up-fill"></i>
                         <div class="volume-slider-container position-absolute bottom-100 start-50 translate-middle-x mb-1 p-2" id="volumePanel" style="display: none; width: 120px;">
                             <input type="range" class="form-range volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="1">
@@ -973,8 +1090,22 @@ function updateLanguage(lang) {
     });
 
     document.querySelectorAll('[data-translate-title]').forEach(el => {
-        translateElement(el, 'data-translate-title', 'title');
+        const translationKey = el.getAttribute('data-translate-title');
+        if (translations[translationKey]) {
+            el.title = translations[translationKey];
+            el.setAttribute('data-tooltip', translations[translationKey]);
+        } else {
+            el.removeAttribute('title');
+            el.removeAttribute('data-tooltip');
+        }
     });
+
+    document.querySelectorAll('[data-tooltip]').forEach(el => {
+      const key = el.getAttribute('data-tooltip');
+      if (translations[key]) {
+        el.setAttribute('data-tooltip', translations[key]);
+      }
+   });
 
     document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
         const translationKey = el.getAttribute('data-translate-placeholder');
@@ -4178,73 +4309,58 @@ function speakMessage(message) {
 </style>
 
 <script>
-function isValidColor(str) {
-    const s = new Option().style;
-    s.color = str;
-    return s.color !== '';
-}
-
-function applyCustomBackgroundColor(color) {
-    document.body.style.background = color;
-    localStorage.setItem('themeBackgroundColor', color);
-}
-
-function resetCustomBackgroundColor() {
-    document.body.style.background = '';
-    localStorage.removeItem('themeBackgroundColor');
-}
-
-function generateColorPresets() {
-    const presets = [
-        '#0f3460', '#0f172a', '#1e293b', '#1e3a8a', '#1d4ed8', '#2563eb',
-        '#3b82f6', '#1e40af', '#3730a3', '#4c1d95', '#5b21b6', '#6d28d9',
-        '#7c3aed', '#0369a1', '#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc',
-        '#bae6fd', '#1d4ed8', '#60a5fa', '#93c5fd', '#bfdbfe',
-        '#064e3b', '#047857', '#059669', '#10b981', '#34d399', '#6ee7b7',
-        '#a7f3d0', '#d1fae5', '#166534', '#22c55e',
-        '#854d0e', '#a16207', '#ca8a04', '#eab308', '#facc15', '#fde047',
-        '#fef08a', '#fef9c3', '#ea580c', '#f97316', '#fb923c', '#fdba74',      
-        '#7f1d1d', '#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5',
-        '#fecaca', '#fee2e2', '#9d174d', '#be185d', '#db2777', '#ec4899',        
-        '#581c87', '#6b21a8', '#7e22ce', '#9333ea', '#a855f7', '#c084fc',
-        '#d8b4fe', '#e9d5ff', '#5b21b6', '#7c3aed',        
-        '#111827', '#1f2937', '#374151', '#4b5563', '#6b7280', '#9ca3af',
-        '#d1d5db', '#e5e7eb', '#f3f4f6', '#f9fafb', '#ffffff',       
-        '#134e4a', '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4',
-        '#ccfbf1', '#ecfdf5', '#0891b2', '#06b6d4',       
-        '#4338ca', '#4f46e5', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-        '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'
-    ];
-
-    const container = document.getElementById('preset-colors');
-    container.innerHTML = '';
-    container.style.gridTemplateColumns = window.innerWidth < 768 ? 'repeat(10, 1fr)' : 'repeat(15, 1fr)';
-
-    presets.forEach(color => {
-        const div = document.createElement('div');
-        div.className = 'color-preset rounded';
-        div.style.background = color;
-        div.style.height = '30px';
-        div.style.cursor = 'pointer';
-        div.title = color;
-        div.style.border = '2px solid transparent';
-        div.addEventListener('click', () => {
-            document.getElementById('color-preview').style.background = color;
-            document.getElementById('color-selector').value = color;
-            document.getElementById('color-input').value = color;
-            document.getElementById('current-color-block').style.background = color;
-            applyCustomBackgroundColor(color);
-            const msgTemplate = translations['apply_color_success'] || 'Background color %s has been applied successfully.';
-            const msg = msgTemplate.replace('%s', color);
-            if (typeof showLogMessage === 'function') showLogMessage(msg);
-            if (typeof speakMessage === 'function') speakMessage(msg);
-        });
-        container.appendChild(div);
-    });
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    const savedColor = localStorage.getItem('themeBackgroundColor') || ' ';
+    function initializeStyles() {
+        const containerWidth = localStorage.getItem('containerWidth') || 1600;
+        const modalMaxWidth = localStorage.getItem('modalMaxWidth') || 1100;
+        document.documentElement.style.setProperty('--container-width', `${containerWidth}px`);
+        document.documentElement.style.setProperty('--modal-max-width', `${modalMaxWidth}px`);
+    }
+
+    initializeStyles();
+
+    const slider = document.getElementById("containerWidth");
+    const widthValue = document.getElementById("widthValue");
+    const modalSlider = document.getElementById("modalMaxWidth");
+    const modalWidthValue = document.getElementById("modalWidthValue");
+
+    slider.value = localStorage.getItem('containerWidth') || 1600;
+    modalSlider.value = localStorage.getItem('modalMaxWidth') || 1100;
+
+    function updateSliderColor(value, slider, valueElement) {
+        let red = Math.min(Math.max((value - 800) / (5400 - 800) * 255, 0), 255);
+        let green = 255 - red;
+        slider.style.background = `linear-gradient(to right, rgb(${red}, ${green}, 255), rgb(${255 - red}, ${green}, ${255 - red}))`;
+        slider.style.setProperty('--thumb-color', `rgb(${red}, ${green}, 255)`);
+        const currentWidthText = translations && translations['current_width'] 
+            ? translations['current_width'] 
+            : 'Current Width';
+        valueElement.textContent = `${currentWidthText}: ${value}px`;
+        valueElement.style.color = `rgb(${red}, ${green}, 255)`;
+    }
+
+    updateSliderColor(slider.value, slider, widthValue);
+    updateSliderColor(modalSlider.value, modalSlider, modalWidthValue);
+
+    slider.oninput = function () {
+        updateSliderColor(slider.value, slider, widthValue);
+        localStorage.setItem('containerWidth', slider.value);
+        document.documentElement.style.setProperty('--container-width', `${slider.value}px`);
+        const msg = translations['page_width_updated'].replace('%s', slider.value);
+        showLogMessage(msg);
+        if (typeof speakMessage === 'function') speakMessage(msg);
+    };
+
+    modalSlider.oninput = function () {
+        updateSliderColor(modalSlider.value, modalSlider, modalWidthValue);
+        localStorage.setItem('modalMaxWidth', modalSlider.value);
+        document.documentElement.style.setProperty('--modal-max-width', `${modalSlider.value}px`);
+        const msg = translations['modal_width_updated'].replace('%s', modalSlider.value);
+        showLogMessage(msg);
+        if (typeof speakMessage === 'function') speakMessage(msg);
+    };
+
+    const savedColor = localStorage.getItem('themeBackgroundColor') || '';
     const preview = document.getElementById('color-preview');
     const selector = document.getElementById('color-selector');
     const input = document.getElementById('color-input');
@@ -4309,65 +4425,76 @@ document.addEventListener('DOMContentLoaded', () => {
     generateColorPresets();
     window.addEventListener('resize', generateColorPresets);
 
-    const slider = document.getElementById("containerWidth");
-    const widthValue = document.getElementById("widthValue");
-    const modalSlider = document.getElementById("modalMaxWidth");
-    const modalWidthValue = document.getElementById("modalWidthValue");
-
-    function updateSliderColor(value, slider, valueElement) {
-        let red = Math.min(Math.max((value - 800) / (5400 - 800) * 255, 0), 255);
-        let green = 255 - red;
-        slider.style.background = `linear-gradient(to right, rgb(${red}, ${green}, 255), rgb(${255 - red}, ${green}, ${255 - red}))`;
-        slider.style.setProperty('--thumb-color', `rgb(${red}, ${green}, 255)`);
-        valueElement.textContent = translations['current_width'].replace('%s', value);
-        valueElement.style.color = `rgb(${red}, ${green}, 255)`;
-    }
-
-    let savedWidth = localStorage.getItem('containerWidth');
-    let savedModalWidth = localStorage.getItem('modalMaxWidth');
-
-    if (savedWidth) slider.value = savedWidth;
-    if (savedModalWidth) modalSlider.value = savedModalWidth;
-
-    updateSliderColor(slider.value, slider, widthValue);
-    updateSliderColor(modalSlider.value, modalSlider, modalWidthValue);
-
-    slider.oninput = function() {
-        updateSliderColor(slider.value, slider, widthValue);
-        localStorage.setItem('containerWidth', slider.value);
-        sendCSSUpdate();
-        const msg = translations['page_width_updated'].replace('%s', slider.value);
-        showLogMessage(msg);
-        if (typeof speakMessage === 'function') speakMessage(msg);
-        setTimeout(() => location.reload(), 3500);
-    };
-
-    modalSlider.oninput = function() {
-        updateSliderColor(modalSlider.value, modalSlider, modalWidthValue);
-        localStorage.setItem('modalMaxWidth', modalSlider.value);
-        sendCSSUpdate();
-        const msg = translations['modal_width_updated'].replace('%s', modalSlider.value);
-        showLogMessage(msg);
-        if (typeof speakMessage === 'function') speakMessage(msg);
-        setTimeout(() => location.reload(), 3500);
-    };
-
-    function sendCSSUpdate() {
-        const width = slider.value;
-        const modalWidth = modalSlider.value;
-        fetch('update-css.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                width: width,
-                modalWidth: modalWidth
-            })
-        })
-        .then(response => response.json())
-        .then(data => console.log('CSS 更新成功:', data))
-        .catch(error => console.error('Error updating CSS:', error));
-    }
+    document.querySelectorAll('input[type=range]').forEach(range => {
+        updateRangeBackground(range);
+        range.addEventListener('input', () => updateRangeBackground(range));
+    });
 });
+
+function isValidColor(str) {
+    const s = new Option().style;
+    s.color = str;
+    return s.color !== '';
+}
+
+function applyCustomBackgroundColor(color) {
+    document.body.style.background = color;
+    localStorage.setItem('themeBackgroundColor', color);
+}
+
+function resetCustomBackgroundColor() {
+    document.body.style.background = '';
+    localStorage.removeItem('themeBackgroundColor');
+}
+
+function generateColorPresets() {
+    const presets = [
+        '#0f3460', '#0f172a', '#1e293b', '#1e3a8a', '#1d4ed8', '#2563eb',
+        '#3b82f6', '#1e40af', '#3730a3', '#4c1d95', '#5b21b6', '#6d28d9',
+        '#7c3aed', '#0369a1', '#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc',
+        '#bae6fd', '#1d4ed8', '#60a5fa', '#93c5fd', '#bfdbfe',
+        '#064e3b', '#047857', '#059669', '#10b981', '#34d399', '#6ee7b7',
+        '#a7f3d0', '#d1fae5', '#166534', '#22c55e',
+        '#854d0e', '#a16207', '#ca8a04', '#eab308', '#facc15', '#fde047',
+        '#fef08a', '#fef9c3', '#ea580c', '#f97316', '#fb923c', '#fdba74',
+        '#7f1d1d', '#b91c1c', '#dc2626', '#ef4444', '#f87171', '#fca5a5',
+        '#fecaca', '#fee2e2', '#9d174d', '#be185d', '#db2777', '#ec4899',
+        '#581c87', '#6b21a8', '#7e22ce', '#9333ea', '#a855f7', '#c084fc',
+        '#d8b4fe', '#e9d5ff', '#5b21b6', '#7c3aed',
+        '#111827', '#1f2937', '#374151', '#4b5563', '#6b7280', '#9ca3af',
+        '#d1d5db', '#e5e7eb', '#f3f4f6', '#f9fafb', '#ffffff',
+        '#134e4a', '#0d9488', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4',
+        '#ccfbf1', '#ecfdf5', '#0891b2', '#06b6d4',
+        '#4338ca', '#4f46e5', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+        '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'
+    ];
+
+    const container = document.getElementById('preset-colors');
+    container.innerHTML = '';
+    container.style.gridTemplateColumns = window.innerWidth < 768 ? 'repeat(10, 1fr)' : 'repeat(15, 1fr)';
+
+    presets.forEach(color => {
+        const div = document.createElement('div');
+        div.className = 'color-preset rounded';
+        div.style.background = color;
+        div.style.height = '30px';
+        div.style.cursor = 'pointer';
+        div.title = color;
+        div.style.border = '2px solid transparent';
+        div.addEventListener('click', () => {
+            document.getElementById('color-preview').style.background = color;
+            document.getElementById('color-selector').value = color;
+            document.getElementById('color-input').value = color;
+            document.getElementById('current-color-block').style.background = color;
+            applyCustomBackgroundColor(color);
+            const msgTemplate = translations['apply_color_success'] || 'Background color %s has been applied successfully.';
+            const msg = msgTemplate.replace('%s', color);
+            if (typeof showLogMessage === 'function') showLogMessage(msg);
+            if (typeof speakMessage === 'function') speakMessage(msg);
+        });
+        container.appendChild(div);
+    });
+}
 
 function updateRangeBackground(range) {
     const val = range.value;
@@ -4376,11 +4503,6 @@ function updateRangeBackground(range) {
     const percent = (val - min) / (max - min) * 100;
     range.style.background = `linear-gradient(to right, #00ff00 0%, #00ff00 ${percent}%, #ffffff ${percent}%, #ffffff 100%)`;
 }
-
-document.querySelectorAll('input[type=range]').forEach(range => {
-    updateRangeBackground(range);
-    range.addEventListener('input', () => updateRangeBackground(range));
-});
 </script>
 
 <script>
@@ -4779,86 +4901,92 @@ window.showConfirmation = function(message, onConfirm) {
 </script>
 
 <script>
-const currentSong = document.querySelector('#currentSong');
-const floatingCurrentSong = document.getElementById('floatingCurrentSong');
+document.addEventListener('DOMContentLoaded', () => {
+    const currentSong = document.querySelector('#currentSong');
+    const floatingCurrentSong = document.getElementById('floatingCurrentSong');
+    const dynamicTitle = document.getElementById('dynamicTitle');
 
-let usedColors = [];
-let usedLogBoxColors = [];
+    let usedColors = [];
+    let usedLogBoxColors = [];
 
-function getColorListFromTheme() {
-    const styles = getComputedStyle(document.documentElement);
-    const lightness = styles.getPropertyValue('--l').trim();
-    const chroma = styles.getPropertyValue('--c').trim();
+    function getColorListFromTheme() {
+        const styles = getComputedStyle(document.documentElement);
+        const lightness = styles.getPropertyValue('--l').trim();
+        const chroma = styles.getPropertyValue('--c').trim();
 
-    const colors = [];
-    for (let i = 1; i <= 7; i++) {
-        const hue = styles.getPropertyValue(`--base-hue-${i}`).trim();
-        const color = `oklch(${lightness} ${chroma} ${hue})`;
-        colors.push(color);
+        const colors = [];
+        for (let i = 1; i <= 7; i++) {
+            const hue = styles.getPropertyValue(`--base-hue-${i}`).trim();
+            const color = `oklch(${lightness} ${chroma} ${hue})`;
+            colors.push(color);
+        }
+        return colors;
     }
-    return colors;
-}
 
-function getNextColor(colorList) {
-    if (usedColors.length === colorList.length) {
-        usedColors = [];
+    function getNextColor(colorList) {
+        if (usedColors.length === colorList.length) {
+            usedColors = [];
+        }
+        const remaining = colorList.filter(c => !usedColors.includes(c));
+        const next = remaining[Math.floor(Math.random() * remaining.length)];
+        usedColors.push(next);
+        return next;
     }
-    const remaining = colorList.filter(c => !usedColors.includes(c));
-    const next = remaining[Math.floor(Math.random() * remaining.length)];
-    usedColors.push(next);
-    return next;
-}
 
-function rotateColors() {
-    const colorList = getColorListFromTheme();
+    function rotateColors() {
+        const colorList = getColorListFromTheme();
 
-    if (currentSong) {
-        currentSong.style.color = getNextColor(colorList);
+        if (currentSong) {
+            currentSong.style.color = getNextColor(colorList);
+        }
+        if (floatingCurrentSong) {
+            floatingCurrentSong.style.color = getNextColor(colorList);
+        }
+        if (dynamicTitle) {
+            dynamicTitle.style.color = getNextColor(colorList);
+        }
     }
-    if (floatingCurrentSong) {
-        floatingCurrentSong.style.color = getNextColor(colorList);
+
+    function getLogBoxColorListFromTheme() {
+        const styles = getComputedStyle(document.documentElement);
+        const lightness = '35%';
+        const chroma = styles.getPropertyValue('--c').trim();
+
+        const colors = new Set();
+        for (let i = 1; i <= 7; i++) {
+            let hue = styles.getPropertyValue(`--base-hue-${i}`).trim();
+            if (!hue) continue;
+            let color = `oklch(${lightness} ${chroma} ${hue})`;
+            colors.add(color);
+        }
+        return Array.from(colors);
     }
-}
 
-function getLogBoxColorListFromTheme() {
-    const styles = getComputedStyle(document.documentElement);
-    const lightness = '35%';
-    const chroma = styles.getPropertyValue('--c').trim();
-
-    const colors = new Set();
-    for (let i = 1; i <= 7; i++) {
-        let hue = styles.getPropertyValue(`--base-hue-${i}`).trim();
-        if (!hue) continue;
-        let color = `oklch(${lightness} ${chroma} ${hue})`;
-        colors.add(color);
+    function getNextLogBoxColor(colorList) {
+        if (usedLogBoxColors.length >= colorList.length) {
+            usedLogBoxColors = [];
+        }
+        const remaining = colorList.filter(c => !usedLogBoxColors.includes(c));
+        const next = remaining[Math.floor(Math.random() * remaining.length)];
+        usedLogBoxColors.push(next);
+        return next;
     }
-    return Array.from(colors);
-}
 
-function getNextLogBoxColor(colorList) {
-    if (usedLogBoxColors.length >= colorList.length) {
-        usedLogBoxColors = [];
+    function rotateLogBoxColors() {
+        const colorList = getLogBoxColorListFromTheme();
+        if (colorList.length === 0) return;
+
+        document.querySelectorAll('.log-box[data-dynamic-bg="true"]').forEach(box => {
+            const color = getNextLogBoxColor(colorList);
+            box.style.background = color;
+        });
     }
-    const remaining = colorList.filter(c => !usedLogBoxColors.includes(c));
-    const next = remaining[Math.floor(Math.random() * remaining.length)];
-    usedLogBoxColors.push(next);
-    return next;
-}
 
-function rotateLogBoxColors() {
-    const colorList = getLogBoxColorListFromTheme();
-    if (colorList.length === 0) return;
-
-    document.querySelectorAll('.log-box[data-dynamic-bg="true"]').forEach(box => {
-        const color = getNextLogBoxColor(colorList);
-        box.style.background = color;
-    });
-}
-
-rotateColors();
-rotateLogBoxColors();
-setInterval(rotateColors, 4000);
-setInterval(rotateLogBoxColors, 4000);
+    rotateColors();
+    rotateLogBoxColors();
+    setInterval(rotateColors, 4000);
+    setInterval(rotateLogBoxColors, 4000);
+});
 </script>
 
 <style>
@@ -5029,6 +5157,12 @@ document.addEventListener("DOMContentLoaded", () => {
 	--c: 0.18;
 	--glass-blur: blur(20px);
 	--radius: 20px;
+        --glass-opacity: 0.85;
+        --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        --shadow-intensity: 0.25;
+        --text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --transition-speed: 0.3s;
+        --highlight-intensity: 0.8;
 
 	--bg-body: oklch(40% var(--base-chroma) var(--base-hue) / 90%);
 	--bg-container: oklch(30% var(--base-chroma) var(--base-hue));
@@ -5387,7 +5521,7 @@ body {
 #floatingLyrics {
 	position: fixed;
 	top: 1%;
-        left: 4.5%;
+	left: 4.5%;
 	background: var(--bg-body);
 	padding: 15px 10px;
 	border-radius: 20px;
@@ -5395,7 +5529,7 @@ body {
 	display: none;
 	opacity: 0;
 	pointer-events: none;
-	cursor: default;
+	cursor: grab;
 	transition: opacity 0.3s ease;
 	writing-mode: vertical-rl;
 	text-orientation: mixed;
@@ -5407,6 +5541,48 @@ body {
 	resize: none;
 	overflow: auto;
 	user-select: none;
+}
+
+@keyframes float {
+	from {
+		transform: translateY(0);
+	}
+
+	to {
+		transform: translateY(-10px);
+	}
+}
+
+@keyframes breath {
+	0%, 100% {
+		--glow-primary: oklch(85% 0.32 var(--glow-base));
+		box-shadow: 0 0 10px 2px color-mix(in oklch, var(--glow-primary), transparent 50%),
+            inset 0 -10px 20px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	}
+
+	50% {
+		--glow-primary: oklch(92% 0.38 var(--glow-base));
+		box-shadow: 0 0 20px 4px color-mix(in oklch, var(--glow-primary), transparent 30%),
+            inset 0 -15px 30px color-mix(in oklch, var(--glow-primary), transparent 50%);
+	}
+}
+
+[data-theme="dark"] #floatingLyrics {
+	--glow-base: var(--base-hue);
+	--glow-primary: oklch(88% 0.35 var(--glow-base));
+	--glow-secondary: oklch(85% 0.3 calc(var(--glow-base) + 15));
+	border: 1px solid color-mix(in oklch, var(--glow-primary), transparent 10%);
+	box-shadow: 0 0 12px 2px color-mix(in oklch, var(--glow-primary), transparent 40%),
+        inset 0 -12px 24px color-mix(in oklch, var(--glow-primary), transparent 60%);
+	animation: float 3s ease-in-out infinite alternate,
+        breath 4s ease-in-out infinite;
+}
+
+[data-theme="dark"] #floatingLyrics:hover {
+	animation-play-state: paused;
+	--glow-primary: oklch(92% 0.38 var(--glow-base));
+	box-shadow: 0 0 20px 4px color-mix(in oklch, var(--glow-primary), transparent 30%),
+        inset 0 -15px 30px color-mix(in oklch, var(--glow-primary), transparent 50%);
 }
 
 #floatingLyrics.visible {
@@ -6284,7 +6460,6 @@ h2#neko-title.neko-title-style {
 	color: var(--accent-color) !important;
 }
 
-
 .table.custom-table thead th {
 	color: var(--purple-text) !important;
 }
@@ -6358,13 +6533,10 @@ h2#neko-title.neko-title-style {
 	overflow: hidden;
 }
 
-.card-body:hover,
 .card:hover {
 	transform: translateY(-2px);
-	z-index: 10;
-	box-shadow: 0 1px 1px oklch(0% 0 0 / 0.05),
-        0 4px 8px oklch(0% 0 0 / 0.1),
-        0 8px 16px oklch(0% 0 0 / 0.1);
+	box-shadow: 0 6px 16px color-mix(in oklch, var(--border-color), transparent 60%),
+        0 0 0 1px var(--accent-color);
 }
 
 .card-header {
@@ -6440,7 +6612,7 @@ h2#neko-title.neko-title-style {
 
 	.card-elevated {
 		box-shadow: 0 2px 4px color-mix(in oklch, var(--border-color), transparent 70%),
-            0 4px 12px color-mix(in oklch, var(--border-color), transparent 80%);
+                0 4px 12px color-mix(in oklch, var(--border-color), transparent 80%);
 	}
 }
 
@@ -6455,6 +6627,103 @@ h2#neko-title.neko-title-style {
 	}
 }
 
+[data-theme="dark"] .container-sm .card {
+	--glow-base: var(--base-hue);
+	--glow-primary: oklch(82% 0.32 var(--glow-base));
+	--glow-secondary: oklch(78% 0.28 calc(var(--glow-base) + 10));
+	border: 1px solid color-mix(in oklch, var(--glow-primary), transparent 20%);
+	box-shadow: 0 2px 8px 1px color-mix(in oklch, var(--glow-primary), transparent 40%),
+        0 4px 24px 2px color-mix(in oklch, var(--glow-secondary), transparent 60%),
+        inset 0 0 12px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	transform: translateY(-2px) !important;
+	transition: all 0.25s ease-out;
+	animation: breath 3s ease-in-out infinite;
+}
+
+[data-theme="dark"] .container-sm .card:hover {
+	--glow-primary: oklch(88% 0.35 var(--glow-base));
+	--glow-secondary: oklch(85% 0.3 calc(var(--glow-base) + 15));
+	box-shadow: 0 4px 16px 2px color-mix(in oklch, var(--glow-primary), transparent 30%),
+        0 8px 32px 4px color-mix(in oklch, var(--glow-secondary), transparent 50%),
+        inset 0 0 24px color-mix(in oklch, var(--glow-primary), transparent 60%);
+	transform: translateY(-4px) !important;
+	animation-play-state: paused;
+}
+
+@keyframes breath {
+	0%, 100% {
+		--glow-primary: oklch(82% 0.32 var(--glow-base));
+		--glow-secondary: oklch(78% 0.28 calc(var(--glow-base) + 10));
+		box-shadow: 0 2px 8px 1px color-mix(in oklch, var(--glow-primary), transparent 40%),
+                0 4px 24px 2px color-mix(in oklch, var(--glow-secondary), transparent 60%),
+                inset 0 0 12px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	}
+
+	50% {
+		--glow-primary: oklch(88% 0.35 var(--glow-base));
+		--glow-secondary: oklch(85% 0.3 calc(var(--glow-base) + 15));
+		box-shadow: 0 4px 16px 2px color-mix(in oklch, var(--glow-primary), transparent 30%),
+                0 8px 32px 4px color-mix(in oklch, var(--glow-secondary), transparent 50%),
+                inset 0 0 24px color-mix(in oklch, var(--glow-primary), transparent 60%);
+	}
+}
+
+[data-theme="dark"] .neko-title-style {
+	--glow-base: var(--base-hue);
+	--glow-primary: oklch(92% 0.35 var(--glow-base));
+	--glow-secondary: oklch(88% 0.3 calc(var(--glow-base) + 10));
+	animation: nekoBreath 3s ease-in-out infinite;
+	text-shadow: 1px 1px 0 color-mix(in oklch, var(--glow-primary), #999 50%),
+        2px 2px 0 color-mix(in oklch, var(--glow-primary), #888 50%),
+        3px 3px 0 color-mix(in oklch, var(--glow-primary), #777 50%),
+        4px 4px 0 color-mix(in oklch, var(--glow-primary), #666 50%),
+        0 0 10px color-mix(in oklch, var(--glow-primary), transparent 60%),
+        0 0 20px color-mix(in oklch, var(--glow-secondary), transparent 70%) !important;
+}
+
+[data-theme="dark"] .neko-title-style:hover {
+	--glow-primary: oklch(96% 0.38 var(--glow-base));
+	--glow-secondary: oklch(92% 0.32 calc(var(--glow-base) + 15));
+	text-shadow: 1px 1px 1px color-mix(in oklch, var(--glow-primary), #999 50%),
+        2px 2px 1px color-mix(in oklch, var(--glow-primary), #888 50%),
+        3px 3px 2px color-mix(in oklch, var(--glow-primary), #777 50%),
+        4px 4px 2px color-mix(in oklch, var(--glow-primary), #666 50%),
+        0 0 15px color-mix(in oklch, var(--glow-primary), transparent 50%),
+        0 0 30px color-mix(in oklch, var(--glow-secondary), transparent 60%) !important;
+}
+
+@keyframes nekoBreath {
+	0%, 100% {
+		--glow-primary: oklch(88% 0.32 var(--glow-base));
+		text-shadow: 1px 1px 0 color-mix(in oklch, var(--glow-primary), #999 50%),
+                2px 2px 0 color-mix(in oklch, var(--glow-primary), #888 50%),
+                3px 3px 0 color-mix(in oklch, var(--glow-primary), #777 50%),
+                4px 4px 0 color-mix(in oklch, var(--glow-primary), #666 50%),
+                0 0 8px color-mix(in oklch, var(--glow-primary), transparent 70%),
+                0 0 15px color-mix(in oklch, var(--glow-secondary), transparent 80%);
+	}
+
+	50% {
+		--glow-primary: oklch(96% 0.38 var(--glow-base));
+		text-shadow: 1px 1px 0 color-mix(in oklch, var(--glow-primary), #999 50%),
+                2px 2px 0 color-mix(in oklch, var(--glow-primary), #888 50%),
+                3px 3px 0 color-mix(in oklch, var(--glow-primary), #777 50%),
+                4px 4px 0 color-mix(in oklch, var(--glow-primary), #666 50%),
+                0 0 15px color-mix(in oklch, var(--glow-primary), transparent 50%),
+                0 0 30px color-mix(in oklch, var(--glow-secondary), transparent 60%);
+	}
+}
+
+.footer-text {
+	color: var(--accent-color) !important;
+	font-weight: 700;
+}
+
+.footer-text b {
+	font-weight: 800;
+	letter-spacing: 0.5px;
+}
+
 .log-content-container {
 	border: 1px solid var(--border-color);
 	border-radius: var(--radius);
@@ -6466,14 +6735,18 @@ h2#neko-title.neko-title-style {
 
 .log-actions {
 	padding: 0.5rem 0;
-	background: var(--bg-container);
-	border-radius: 0 0 var(--radius) var(--radius);
+	background: none !important;
+	border-radius: 0 !important;
+	border: none !important;
 	display: flex;
 	justify-content: center;
 }
 
 .log-actions.multiple-actions {
 	padding: 0.5rem;
+	background: none !important;
+	border-radius: 0 !important;
+	border: none !important;
 	justify-content: center;
 }
 
@@ -6483,6 +6756,9 @@ h2#neko-title.neko-title-style {
 	gap: 0.5rem;
 	flex-wrap: wrap;
 	width: auto;
+	background: none !important;
+	border-radius: 0 !important;
+	border: none !important;
 }
 
 .log-content-container:hover {
@@ -6790,16 +7066,7 @@ h1 {
 	font-weight: 900;
 }
 
-
-h3, h4 {
-	color: oklch(
-        calc(var(--l) - 10%) 
-        calc(var(--c) * 0.7) 
-        calc(var(--base-hue) + 60)
-      ) !important;
-}
-
-h2 ,h5, h6 {
+h2 ,h3, h4 ,h5, h6 {
         color: var(--accent-color) !important;
         font-weight: bold;
 }
@@ -6838,17 +7105,22 @@ a.link-primary:hover svg path {
 table {
 	border-collapse: separate;
 	border-spacing: 0;
+	width: 100%;
 }
 
-thead.table-light {
-	background: var(--card-bg) !important;
-	border-radius: var(--radius) var(--radius) var(--radius) var(--radius);
-	overflow: hidden;
+thead.table-light th {
+	font-weight: 600;
+	padding: 0.85rem 1.25rem;
+	border: none !important;
+	background: var(--accent-color) !important;
+	color: #fff !important;
+	text-align: left;
+	font-size: 0.925rem;
+	transition: all 0.2s ease;
 }
 
 thead.table-light th:hover {
-	background: var(--card-bg) !important;
-	color: var(--accent-color) !important;
+	background: color-mix(in oklch, var(--accent-color), black 10%) !important;
 }
 
 thead.table-light tr:first-child th:first-child {
@@ -6859,21 +7131,8 @@ thead.table-light tr:first-child th:last-child {
 	border-top-right-radius: var(--radius) !important;
 }
 
-thead.table-light th {
-	font-weight: 600;
-	padding: 0.75rem 1rem;
-	border: none !important;
-	position: relative;
-}
-
 thead.table-light th:not(:last-child)::after {
-	content: "";
-	position: absolute;
-	right: 0;
-	top: 25%;
-	height: 50%;
-	width: 1px;
-	background: var(--border-color);
+	content: none;
 }
 
 .btn-primary,
@@ -7475,23 +7734,120 @@ input[type=range]::-ms-thumb {
 	overflow: auto;
 }
 
-/* START .container-sm */
-.container-sm {
-    width: 1600px !important; 
-    max-width: 100%;
-    margin: 0 auto;
+:root {
+	--container-width: 1600px;
+	--modal-max-width: 1100px;
 }
-/* END .container-sm */
 
-/* START .modal-xl */
+.container-sm {
+	width: var(--container-width) !important;
+	max-width: 100%;
+	margin: 0 auto;
+}
+
 .modal-xl {
-    max-width: 1100px !important; 
+	max-width: var(--modal-max-width) !important;
+	margin: 0 auto;
 }
 
 @media (max-width: 768px) {
-    .modal-xl {
-        max-width: 100%;
-    }
+	.modal-xl {
+		max-width: 100%;
+	}
 }
-/* END .modal-xl */
+
+[data-theme="dark"] {
+	--glow-base: var(--base-hue);
+	--glow-primary: oklch(88% 0.35 var(--glow-base));
+	--glow-secondary: oklch(85% 0.3 calc(var(--glow-base) + 15));
+}
+
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] input[type="text"] {
+	border: 1px solid color-mix(in oklch, var(--glow-primary), transparent 30%);
+	box-shadow: 0 0 8px 1px color-mix(in oklch, var(--glow-primary), transparent 60%),
+              inset 0 -4px 12px color-mix(in oklch, var(--glow-primary), transparent 80%);
+	transition: box-shadow 0.3s ease;
+}
+
+[data-theme="dark"] .form-select:hover,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] input[type="text"]:hover,
+[data-theme="dark"] input[type="text"]:focus {
+	box-shadow: 0 0 12px 2px color-mix(in oklch, var(--glow-primary), transparent 40%),
+              inset 0 -6px 16px color-mix(in oklch, var(--glow-primary), transparent 70%);
+}
+
+[data-theme="dark"] .form-control:disabled {
+	opacity: 0.7;
+	box-shadow: 0 0 4px 0 color-mix(in oklch, var(--glow-primary), transparent 70%),
+              inset 0 -2px 8px color-mix(in oklch, var(--glow-primary), transparent 90%);
+}
+
+[data-theme="dark"] .form-check-input[type="checkbox"] {
+	border: 1px solid color-mix(in oklch, var(--glow-primary), transparent 50%);
+	background-color: color-mix(in oklch, var(--bg-body), transparent 20%);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .form-check-input:checked[type="checkbox"] {
+	background-color: var(--glow-primary);
+	border-color: var(--glow-primary);
+	box-shadow: 0 0 8px var(--glow-primary),
+        inset 0 0 4px white;
+}
+
+[data-theme="dark"] .form-check-input[type="radio"] {
+	border: 1px solid color-mix(in oklch, var(--glow-primary), transparent 50%);
+	background-color: color-mix(in oklch, var(--bg-body), transparent 20%);
+	box-shadow: 0 0 6px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .form-check-input:checked[type="radio"] {
+	background-color: var(--glow-primary);
+	border-color: var(--glow-primary);
+	box-shadow: 0 0 8px var(--glow-primary),
+        inset 0 0 6px color-mix(in oklch, white, transparent 60%);
+}
+
+[data-theme="dark"] .form-check-input:hover {
+	box-shadow: 0 0 10px color-mix(in oklch, var(--glow-primary), transparent 50%);
+}
+
+[data-theme="dark"] .form-check-input:disabled {
+	opacity: 0.5;
+	box-shadow: 0 0 4px color-mix(in oklch, var(--glow-primary), transparent 80%);
+}
+
+[data-theme="dark"] table a svg {
+	filter: drop-shadow(0 0 2px color-mix(in oklch, var(--glow-primary), transparent 30%));
+	transition: filter 0.3s ease;
+}
+
+[data-theme="dark"] table a:hover svg {
+	filter: drop-shadow(0 0 6px var(--glow-primary));
+}
+
+[data-theme="dark"] #dynamicTitle,h2,h3,h4,h5,h6 {
+	position: relative;
+	color: color-mix(in oklch, var(--glow-primary), white 20%);
+	text-shadow: 0 0 5px color-mix(in oklch, var(--glow-primary), transparent 40%),
+        0 0 15px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	animation: text-glow-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes text-glow-pulse {
+	0% {
+		text-shadow: 0 0 5px color-mix(in oklch, var(--glow-primary), transparent 40%),
+      0 0 15px color-mix(in oklch, var(--glow-primary), transparent 70%);
+	}
+
+	100% {
+		text-shadow: 0 0 10px color-mix(in oklch, var(--glow-primary), transparent 30%),
+      0 0 25px color-mix(in oklch, var(--glow-primary), transparent 60%);
+	}
+}
 </style>

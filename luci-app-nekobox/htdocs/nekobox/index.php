@@ -717,6 +717,13 @@ if (isset($_GET['ajax'])) {
     $cpuLoadAvg5Min = round($cpuLoad[1], 2);
     $cpuLoadAvg15Min = round($cpuLoad[2], 2);
 
+    $timezone = trim(shell_exec("uci get system.@system[0].zonename 2>/dev/null"));
+    if (!$timezone) {
+        $timezone = 'UTC';
+    }
+    date_default_timezone_set($timezone);
+    $currentTime = date("Y-m-d H:i:s");
+
     echo json_encode([
         'systemInfo' => "$devices - $fullOSInfo",
         'ramUsage' => "$ramUsage/$ramTotal MB",
@@ -725,6 +732,8 @@ if (isset($_GET['ajax'])) {
         'cpuLoadAvg1Min' => $cpuLoadAvg1Min,
         'ramTotal' => $ramTotal,
         'ramUsageOnly' => $ramUsage,
+        'timezone' => $timezone,
+        'currentTime' => $currentTime,
     ]);
     exit;
 }
@@ -826,7 +835,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
     </script>
 <?php endif; ?>
 
-<div class="container-sm container-bg mt-4">
+<div class="container-sm container-bg mt-0">
     <?php include 'navbar.php'; ?>
     <div class="container-sm text-center col-8">
         <img src="./assets/img/nekobox.png" alt="Icon" class="centered-img">
@@ -843,7 +852,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
     </div>
 <h2 id="neko-title" class="neko-title-style" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#systemInfoModal">NekoBox</h2>
 
-<div class="px-4 control-box">
+<div class="px-4 mt-4 control-box">
     <div class="card">
         <div class="card-body">
             <div class="mb-4">
@@ -904,7 +913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
                             ?>
                         </select>
                         
-                        <div class="btn-group w-100">
+                        <div class="btn-group w-100  position-relative" style="top: 25px;">
                             <button type="submit" name="neko" value="start" 
                                     class="btn btn<?= ($neko_status == 1) ? "-outline" : "" ?>-success">
                                 <i class="bi bi-power"></i> 
@@ -945,7 +954,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
                             <?php endforeach; ?>
                         </select>
                         
-                        <div class="btn-group w-100">
+                        <div class="btn-group w-100 position-relative" style="top: 25px;">
                             <button type="submit" name="singbox" value="start" 
                                     class="btn btn<?= ($singbox_status == 1) ? "-outline" : "" ?>-success">
                                 <i class="bi bi-power"></i> 
@@ -1135,12 +1144,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
               <span id="ramUsage" class="form-control text-start ps-3"></span>
             </div>
           </div>
-          <div class="mb-3 d-flex align-item-center">
+          <div class="mb-3 d-flex align-items-center">
             <h6 class="mb-0" style="width: 320px;">
               <i data-feather="zap" class="me-2"></i><span data-translate="avgLoad">Average Load</span>
             </h6>
             <div class="flex-grow-1">
               <span id="cpuLoad" class="form-control text-start ps-3"></span>
+            </div>
+          </div>
+          <div class="mb-3 d-flex align-items-center">
+            <h6 class="mb-0" style="width: 320px;">
+              <i data-feather="globe" class="me-2"></i><span data-translate="systemTimezone">System Timezone</span>
+            </h6>
+            <div class="flex-grow-1">
+              <span id="systemTimezone" class="form-control text-start ps-3"></span>
+            </div>
+          </div>
+          <div class="mb-3 d-flex align-items-center">
+            <h6 class="mb-0" style="width: 320px;">
+              <i data-feather="clock" class="me-2"></i><span data-translate="currentTime">Current Time</span>
+            </h6>
+            <div class="flex-grow-1">
+              <span id="systemCurrentTime" class="form-control text-start ps-3"></span>
             </div>
           </div>
           <div class="mb-3 d-flex align-items-center">
@@ -1170,33 +1195,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selected_config'])) {
     </div>
   </div>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     function fetchSystemStatus() {
         fetch('?ajax=1')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('systemInfo').innerText = data.systemInfo;
-                document.getElementById('ramUsage').innerText = data.ramUsage;
-                document.getElementById('cpuLoad').innerText = data.cpuLoad;
+                const systemInfoEl = document.getElementById('systemInfo');
+                if (systemInfoEl) systemInfoEl.innerText = data.systemInfo;
 
-                let uptimeText = data.uptime;
-                if (typeof uptimeText === 'string') {
-                    uptimeText = uptimeText.replace(/days/, translations['days'] || 'days')
-                                           .replace(/hours/, translations['hours'] || 'hours')
-                                           .replace(/minutes/, translations['minutes'] || 'minutes')
-                                           .replace(/seconds/, translations['seconds'] || 'seconds');
-                    document.getElementById('uptime').innerText = uptimeText;
-                } else {
-                    document.getElementById('uptime').innerText = data.uptime;
+                const ramUsageEl = document.getElementById('ramUsage');
+                if (ramUsageEl) ramUsageEl.innerText = data.ramUsage;
+
+                const cpuLoadEl = document.getElementById('cpuLoad');
+                if (cpuLoadEl) cpuLoadEl.innerText = data.cpuLoad;
+
+                const timezoneEl = document.getElementById('systemTimezone');
+                if (timezoneEl) timezoneEl.innerText = data.timezone;
+
+                const currentTimeEl = document.getElementById('systemCurrentTime');
+                if (currentTimeEl) currentTimeEl.innerText = data.currentTime;
+
+                const uptimeEl = document.getElementById('uptime');
+                if (uptimeEl) {
+                    let uptimeText = data.uptime;
+                    if (typeof uptimeText === 'string') {
+                        uptimeText = uptimeText.replace(/days/, translations['days'] || 'days')
+                                               .replace(/hours/, translations['hours'] || 'hours')
+                                               .replace(/minutes/, translations['minutes'] || 'minutes')
+                                               .replace(/seconds/, translations['seconds'] || 'seconds');
+                        uptimeEl.innerText = uptimeText;
+                    } else {
+                        uptimeEl.innerText = data.uptime;
+                    }
                 }
 
-                document.getElementById('cpuLoadAvg1Min').innerText = data.cpuLoadAvg1Min;
-                document.getElementById('ramUsageOnly').innerText = data.ramUsageOnly + ' / ' + data.ramTotal + ' MB';
+                const cpuLoadAvg1MinEl = document.getElementById('cpuLoadAvg1Min');
+                if (cpuLoadAvg1MinEl) cpuLoadAvg1MinEl.innerText = data.cpuLoadAvg1Min;
+
+                const ramUsageOnlyEl = document.getElementById('ramUsageOnly');
+                if (ramUsageOnlyEl) ramUsageOnlyEl.innerText = data.ramUsageOnly + ' / ' + data.ramTotal + ' MB';
             })
             .catch(error => console.error('Error fetching data:', error));
     }
 
     setInterval(fetchSystemStatus, 1000);
-    fetchSystemStatus();  
+    fetchSystemStatus();
+});
 </script>
 
 <div class="px-4 mt-4">
@@ -1451,3 +1495,4 @@ $(document).ready(function() {
     startUpdateTimer();
 });
 </script>
+
