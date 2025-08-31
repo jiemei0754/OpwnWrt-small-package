@@ -202,7 +202,7 @@ EOL;
 </nav>
 <div class="outer-container px-3">
     <div class="container-fluid">
-        <h2 class="title text-center" style="margin-top: 3rem; margin-bottom: 1rem;" data-translate="title">Sing-box Conversion Template One</h2>
+        <h2 class="title text-center mt-3 mb-3" data-translate="title">Sing-box Conversion Template One</h2>
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title" data-translate="helpInfoHeading">Help Information</h4>
@@ -435,7 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['generateConfig'])) {
                 if (isset($data['outbounds']) && is_array($data['outbounds'])) {
                     $data['outbounds'] = array_values(array_filter($data['outbounds'], function ($node) use (&$removedTags) {
                         if (
-                            (isset($node['method']) && stripos($node['method'], 'chacha20') !== false) ||
+                            (isset($node['method']) && strtolower($node['method']) === 'chacha20') ||
                             (isset($node['plugin']) && stripos($node['plugin'], 'v2ray-plugin') !== false)
                         ) {
                             if (isset($node['tag'])) {

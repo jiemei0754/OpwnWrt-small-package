@@ -313,7 +313,7 @@ uci.foreach(uciconf, ucisniff, (cfg) => {
 		return null;
 
 	config.sniffer.sniff[cfg.protocol] = {
-		ports: map(cfg.ports, ports => strToInt(ports) || null), // DEBUG ERROR data type *utils.IntRanges[uint16]
+		ports: map(cfg.ports, ports => strToInt(ports) || null), // @DEBUG ERROR data type *utils.IntRanges[uint16]
 		"override-destination": (cfg.override_destination === '0') ? false : true
 	};
 });
@@ -352,7 +352,7 @@ push(config.listeners, {
 	listen: '::',
 	network: ['tcp', 'udp'],
 	target: '1.1.1.1:53'
-}); // Not required for v1.19.2+
+}); // @Not required for v1.19.2+
 /* Tun settings */
 if (match(proxy_mode, /tun/))
 	push(config.listeners, {
@@ -510,6 +510,7 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		"port-range": cfg.mieru_port_range,
 		transport: cfg.mieru_transport,
 		multiplexing: cfg.mieru_multiplexing,
+		"handshake-mode": cfg.mieru_handshake_mode,
 
 		/* Snell */
 		psk: cfg.snell_psk,
@@ -529,8 +530,8 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		"reduce-rtt": strToBool(cfg.tuic_reduce_rtt),
 		"heartbeat-interval": strToInt(cfg.tuic_heartbeat) || null,
 		"request-timeout": strToInt(cfg.tuic_request_timeout) || null,
-		// fast-open: true
-		// max-open-streams: 20
+		// @"fast-open": true,
+		"max-open-streams": strToInt(cfg.tuic_max_open_streams) || null,
 
 		/* Trojan */
 		"ss-opts": cfg.trojan_ss_enabled === '1' ? {
@@ -550,6 +551,7 @@ uci.foreach(uciconf, ucinode, (cfg) => {
 		"global-padding": cfg.type === 'vmess' ? (cfg.vmess_global_padding === '0' ? false : true) : null,
 		"authenticated-length": strToBool(cfg.vmess_authenticated_length),
 		"packet-encoding": cfg.vmess_packet_encoding,
+		encryption: cfg.vless_encryption,
 
 		/* WireGuard */
 		ip: cfg.wireguard_ip,
@@ -765,7 +767,7 @@ uci.foreach(uciconf, ucirule, (cfg) => {
 /* Routing rules START */
 /* Routing rules */
 config.rules = [
-	"IN-NAME,dns-in,dns-out", // Not required for v1.19.2+
+	"IN-NAME,dns-in,dns-out", // @Not required for v1.19.2+
 	"DST-PORT,53,dns-out"
 ];
 uci.foreach(uciconf, ucirout, (cfg) => {
