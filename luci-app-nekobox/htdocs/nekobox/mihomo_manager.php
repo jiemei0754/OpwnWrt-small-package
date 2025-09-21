@@ -517,6 +517,19 @@ function download_file($url, $destination) {
 .table-hover tbody tr:hover td {
     color: #cc0fa9;
 }
+
+.node-count-badge {
+    position: absolute;
+    top: 1.4rem;
+    right: 0.9rem;
+    background-color: var(--accent-color);
+    color: #fff;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 10;
+}
 </style>
 <?php if ($updateCompleted): ?>
     <script>
@@ -662,7 +675,7 @@ $(document).ready(function() {
                                 </div>
                                 <input type="hidden" name="index" value="<?php echo $i; ?>">
                                 <div class="text-center mt-3">
-                                    <button type="submit" name="update" class="btn btn-info btn-block">
+                                    <button type="submit" name="update" class="btn btn-primary btn-block">
                                         <i class="bi bi-arrow-repeat"></i> <span data-translate="updateSubscription">Settings</span> <?php echo $displayIndex; ?>
                                     </button>
                                 </div>
@@ -695,7 +708,7 @@ $(document).ready(function() {
     </form>
 </div>
 
-<h2 class="text-center mt-4 mb-3" data-translate="fileManagement">File Management</h2>
+<h2 class="text-center mt-3 mb-4" data-translate="fileManagement">File Management</h2>
 
 <div class="container-sm px-3 px-md-4">
   <div class="row g-3">
@@ -724,9 +737,102 @@ $(document).ready(function() {
       $isProxy = ($index < count($proxyFiles));
       $size = file_exists($filePath) ? formatSize(filesize($filePath)) : ($translations['fileNotExist'] ?? 'Not Exist');
       $modified = file_exists($filePath) ? date('Y-m-d H:i:s', filemtime($filePath)) : '-';
+
+      $validProtocols = '/^(ss|shadowsocks|vmess|vless|trojan|hysteria2|socks5|http)$/i';
+      $nodeCount = 0;
+
+      if (file_exists($filePath)) {
+          $content = file_get_contents($filePath);
+
+          $json = json_decode($content, true);
+          if (json_last_error() === JSON_ERROR_NONE && isset($json['outbounds']) && is_array($json['outbounds'])) {
+              foreach ($json['outbounds'] as $outbound) {
+                  if (!empty($outbound['type']) && preg_match($validProtocols, $outbound['type'])) {
+                      $nodeCount++;
+                  }
+              }
+          } else {
+              if (preg_match('/^\s*proxies\s*:/im', $content, $matches, PREG_OFFSET_CAPTURE)) {
+                  $start = $matches[0][1] + strlen($matches[0][0]);
+                  $rest = substr($content, $start);
+                  $lines = preg_split("/\r?\n/", $rest);
+            
+                  $hasRealProxies = false;
+                  foreach ($lines as $line) {
+                      $line = trim($line);
+                      if ($line === '' || str_starts_with($line, '#')) continue;
+                
+                      if (preg_match('/^\-\s*(\{|.*type.*:)/', $line)) {
+                          $hasRealProxies = true;
+                          break;
+                      }
+                  }
+            
+                  if (!$hasRealProxies) {
+                      $nodeCount = 0;
+                  } else {
+                      foreach ($lines as $line) {
+                          $line = trim($line);
+                          if ($line === '' || str_starts_with($line, '#')) continue;
+                    
+                          if (preg_match('/^\-\s*\{.*\}$/', $line)) {
+                              if (preg_match('/^\-\s*\{(.*)\}\s*$/', $line, $match)) {
+                                  $objContent = $match[1];
+                            
+                                  $pairs = preg_split('/\s*,\s*/', $objContent);
+                                  $typeFound = false;
+                            
+                                  foreach ($pairs as $pair) {
+                                      if (preg_match('/^\s*(\w+)\s*:\s*(.+?)\s*$/', $pair, $kvMatch)) {
+                                          $key = $kvMatch[1];
+                                          $value = trim($kvMatch[2], " '\"");
+                                     
+                                          if ($key === 'type' && preg_match($validProtocols, $value)) {
+                                              $nodeCount++;
+                                              $typeFound = true;
+                                              break;
+                                          }
+                                      }
+                                  }
+                            
+                                  if (!$typeFound) {
+                                      $objStr = '{' . $objContent . '}';
+                                      $objStrClean = preg_replace("/(['\"])?([a-zA-Z0-9_]+)(['\"])?\s*:/", '"$2":', $objStr);
+                                      $objStrClean = str_replace("'", '"', $objStrClean);
+                                      $obj = json_decode($objStrClean, true);
+                                      if (json_last_error() === JSON_ERROR_NONE && isset($obj['type']) && preg_match($validProtocols, $obj['type'])) {
+                                          $nodeCount++;
+                                      }
+                                  }
+                              }
+                          } 
+                          elseif (preg_match('/type\s*:\s*["\']?(\w+)["\']?/i', $line, $match)) {
+                              if (preg_match($validProtocols, $match[1])) {
+                                   $nodeCount++;
+                              }
+                          }
+                      }
+                  }
+              }
+              elseif (preg_match('/^(ss|vmess|vless|trojan|hysteria2|socks5|http):\/\//im', $content)) {
+                  $lines = preg_split("/\r?\n/", $content);
+                  foreach ($lines as $line) {
+                      $line = trim($line);
+                      if ($line === '' || str_starts_with($line, '#')) continue;
+                      if (preg_match('/^(ss|vmess|vless|trojan|hysteria2|socks5|http):\/\//i', $line)) {
+                          $nodeCount++;
+                      }
+                  }
+              }
+              else {
+                  $nodeCount = 0;
+              }
+          }
+      }
     ?>
     <div class="col-12 col-md-6 col-lg-3">
       <div class="card h-100 text-start">
+        <span class="node-count-badge"><span class="node-number"><?= $nodeCount ?></span> <span data-translate="nodesLabel">Nodes</span></span>
         <div class="card-body d-flex flex-column justify-content-between">
           <h5 class="card-title mb-2" data-tooltip="fileName"><?= htmlspecialchars($file) ?></h5>
           <p class="card-text mb-1"><strong data-translate="fileSize">Size</strong>: <?= $size ?></p>
@@ -743,27 +849,101 @@ $(document).ready(function() {
               $line = trim($line);
               if (empty($line)) continue;
 
-              if (preg_match('/訂閱資訊[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?(?:\s*\/\s*剩餘\s*(\d+)?\s*天)?(?:\s*\/\s*到期\s*(\d{4}-\d{2}-\d{2}))?/iu', $line, $matches)) {
+              if (preg_match('/訂閱資訊[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?(?:\s*\/\s*(?:剩餘|剩余)\s*(\d+)\s*天)?(?:\s*\/\s*(?:到期|expire)\s*(\d{4}-\d{2}-\d{2}))?/iu', $line, $matches)) {
                   if (!empty($matches[1])) {
                      $flowLeft = $matches[1] . strtoupper($matches[2] ?? 'MB');
                   }
-                  if (isset($matches[3])) {
-                      $resetDaysLeft = $matches[3] !== '' ? $matches[3] : '0';
+                  if (isset($matches[3]) && $matches[3] !== '') {
+                      $resetDaysLeft = $matches[3];
                   }
                   if (!empty($matches[4])) {
                       $expireDateText = $matches[4];
                   }
+                  break;
               } elseif (preg_match('/#(.*)$/', $line, $matches)) {
                   $hashComment = urldecode(trim($matches[1]));
 
-                  if (preg_match('/剩余流量[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?(?:\s|$)/iu', $hashComment, $flowMatch)) {
+                  if (preg_match('/(?:剩余流量|流量)[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?(?:\s|$)/iu', $hashComment, $flowMatch)) {
                       $flowLeft = $flowMatch[1] . strtoupper($flowMatch[2] ?? 'MB');
                   }
-                  if (preg_match('/距离下次重置剩余[:：]\s*(\d+)\s*天/u', $hashComment, $resetMatch)) {
+
+                  if (preg_match('/(?:距离下次重置剩余|距离|重置)[:：]\s*(\d+)\s*天/u', $hashComment, $resetMatch)) {
                       $resetDaysLeft = $resetMatch[1];
                   }
-                  if (preg_match('/套餐到期[:：]\s*(\d{4}-\d{2}-\d{2})/u', $hashComment, $dateMatch)) {
+
+                  if (preg_match('/(?:套餐到期|套餐|到期)[:：]\s*(\d{4}-\d{2}-\d{2})/u', $hashComment, $dateMatch)) {
                       $expireDateText = $dateMatch[1];
+                  }
+              }
+          }
+
+          if (empty($resetDaysLeft) && !empty($expireDateText)) {
+              $currentDate = date('Y-m-d');
+              $expireTimestamp = strtotime($expireDateText . ' 23:59:59');
+              $currentTimestamp = strtotime($currentDate);
+    
+              if ($expireTimestamp !== false && $currentTimestamp !== false) {
+                  $daysLeft = ceil(($expireTimestamp - $currentTimestamp) / (60 * 60 * 24));
+                  $resetDaysLeft = (string)$daysLeft;
+              }
+          }
+
+          $needMoreInfo = empty($flowLeft) || empty($resetDaysLeft) || empty($expireDateText);
+          if ($needMoreInfo) {
+              $fileContent = file_get_contents($filePath);
+    
+              $config = json_decode($fileContent, true);
+    
+              if (json_last_error() === JSON_ERROR_NONE && is_array($config)) {
+                  if (isset($config['outbounds']) && is_array($config['outbounds'])) {
+                      foreach ($config['outbounds'] as $outbound) {
+                          if (isset($outbound['tag'])) {
+                              $tag = $outbound['tag'];
+                    
+                              if (empty($flowLeft) && preg_match('/(?:剩余流量|剩余|流量)[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?/iu', $tag, $matches)) {
+                                   $flowLeft = $matches[1] . strtoupper($matches[2] ?? 'MB');
+                              }
+                    
+                              if (empty($resetDaysLeft) && preg_match('/(?:距离下次重置剩余|距离|重置)[:：]\s*(\d+)\s*天/u', $tag, $matches)) {
+                                   $resetDaysLeft = $matches[1];
+                              }
+                    
+                              if (empty($expireDateText) && preg_match('/(?:套餐到期|套餐|到期)[:：]\s*(\d{4}-\d{2}-\d{2})/u', $tag, $matches)) {
+                                  $expireDateText = $matches[1];
+                              }
+                           }
+                
+                          if (!empty($flowLeft) && !empty($resetDaysLeft) && !empty($expireDateText)) {
+                              break;
+                          }
+                      }
+                  }
+        
+                  if (isset($config['tag'])) {
+                      $tag = $config['tag'];
+            
+                      if (empty($flowLeft) && preg_match('/(?:剩余流量|剩余|流量)[:：]\s*([\d.]+)\s*(T|TB|G|GB|M|MB|K|KB)?/iu', $tag, $matches)) {
+                           $flowLeft = $matches[1] . strtoupper($matches[2] ?? 'MB');
+                      }
+            
+                      if (empty($resetDaysLeft) && preg_match('/(?:距离下次重置剩余|距离|重置)[:：]\s*(\d+)\s*天/u', $tag, $matches)) {
+                          $resetDaysLeft = $matches[1];
+                       }
+            
+                      if (empty($expireDateText) && preg_match('/(?:套餐到期|套餐|到期)[:：]\s*(\d{4}-\d{2}-\d{2})/u', $tag, $matches)) {
+                           $expireDateText = $matches[1];
+                      }
+                  }
+        
+                  if (empty($resetDaysLeft) && !empty($expireDateText)) {
+                      $currentDate = date('Y-m-d');
+                      $expireTimestamp = strtotime($expireDateText . ' 23:59:59');
+                      $currentTimestamp = strtotime($currentDate);
+            
+                      if ($expireTimestamp !== false && $currentTimestamp !== false) {
+                          $daysLeft = floor(($expireTimestamp - $currentTimestamp) / (60 * 60 * 24));
+                          $resetDaysLeft = (string)$daysLeft;
+                      }
                   }
               }
           }
@@ -786,14 +966,19 @@ $(document).ready(function() {
                   $infoParts[] = $flowLeft;
               }
 
-              if ($resetDaysLeft !== '') {
-                  $infoParts[] = 
-                      ($translations['resetDaysLeftLabel'] ?? 'Remaining') . ' ' 
-                      . $resetDaysLeft . ' ' 
-                      . ($translations['daysUnit'] ?? 'days');
+              if ($hasResetDays) {
+                  $days = (int)$resetDaysLeft;
+                  if ($days < 0) {
+                      $infoParts[] = '<span style="color: red;">已过期 ' . abs($days) . ' 天</span>';
+                  } else {
+                      $infoParts[] = 
+                          ($translations['resetDaysLeftLabel'] ?? 'Remaining') . ' ' 
+                          . $resetDaysLeft . ' ' 
+                          . ($translations['daysUnit'] ?? 'days');
+                  }
               }
 
-              if ($expireDateText) {
+              if ($hasExpireDate) {
                   $currentDate = date('Y-m-d');
                   $isExpired = strtotime($expireDateText) < strtotime($currentDate);
                   $expireText = ($translations['expireDateLabel'] ?? 'Expires') . ' ' . $expireDateText;
