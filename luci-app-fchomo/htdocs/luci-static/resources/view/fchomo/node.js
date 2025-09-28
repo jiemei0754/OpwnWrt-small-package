@@ -58,6 +58,54 @@ function parseProviderYaml(field, name, cfg) {
 	return config;
 }
 
+class VlessEncryptionClient {
+	// origin:
+	// https://github.com/XTLS/Xray-core/pull/5067
+	// client:
+	// https://github.com/muink/mihomo/blob/7917f24f428e40ac20b8b8f953b02cf59d1be334/transport/vless/encryption/factory.go#L12
+	// https://github.com/muink/mihomo/blob/7917f24f428e40ac20b8b8f953b02cf59d1be334/transport/vless/encryption/client.go#L45
+
+	constructor(payload) {
+		this.input = payload || '';
+		let content = String.prototype.split.call(this.input, '.');
+
+		if (content.length >= 4) {
+			this.method = content[0];
+			this.xormode = content[1];
+			this.rtt = content[2];
+			this.paddings = [];
+			this.keypairs = [];
+
+			// https://github.com/muink/mihomo/blob/7917f24f428e40ac20b8b8f953b02cf59d1be334/transport/vless/encryption/factory.go#L39
+			content.slice(3).forEach((e) => {
+				if (e.length < 20)
+					this.paddings.push(e);
+				else
+					this.keypairs.push(e);
+			});
+		} else
+			console.error('Invalid VLESS encryption value: ' + payload);
+	}
+
+	setKey(key, value) {
+		this[key] = value;
+
+		return this
+	}
+
+	toString() {
+		let required = [
+			this.method,
+			this.xormode,
+			this.rtt
+		].join('.');
+
+		return required +
+			(hm.isEmpty(this.paddings) ? '' : '.' + this.paddings.join('.')) + // Optional
+			(hm.isEmpty(this.keypairs) ? '' : '.' + this.keypairs.join('.')); // Required
+	}
+}
+
 return view.extend({
 	load() {
 		return Promise.all([
@@ -88,6 +136,7 @@ return view.extend({
 		ss.hm_lowcase_only = true;
 
 		ss.tab('field_general', _('General fields'));
+		ss.tab('field_vless_encryption', _('Vless Encryption fields'));
 		ss.tab('field_tls', _('TLS fields'));
 		ss.tab('field_transport', _('Transport fields'));
 		ss.tab('field_multiplex', _('Multiplex fields'));
@@ -208,8 +257,8 @@ return view.extend({
 		so.modalonly = true;
 
 		/* Mieru fields */
-		so = ss.taboption('field_general', form.Value, 'mieru_port_range', _('Port range'));
-		so.datatype = 'portrange';
+		so = ss.taboption('field_general', form.DynamicList, 'mieru_ports', _('Ports pool'));
+		so.datatype = 'or(port, portrange)';
 		so.depends('type', 'mieru');
 		so.modalonly = true;
 
@@ -419,10 +468,6 @@ return view.extend({
 		so.depends({type: /^(vmess|vless)$/});
 		so.modalonly = true;
 
-		so = ss.taboption('field_general', form.Value, 'vless_encryption', _('encryption'));
-		so.depends('type', 'vless');
-		so.modalonly = true;
-
 		/* WireGuard fields */
 		so = ss.taboption('field_general', form.Value, 'wireguard_ip', _('Local address'),
 			_('The %s address used by local machine in the Wireguard network.').format('IPv4'));
@@ -496,6 +541,7 @@ return view.extend({
 		//so.value('gost-plugin', _('gost-plugin'));
 		so.value('shadow-tls', _('shadow-tls'));
 		so.value('restls', _('restls'));
+		//so.value('kcptun', _('kcptun'));
 		so.depends('type', 'ss');
 		so.modalonly = true;
 
@@ -557,6 +603,73 @@ return view.extend({
 		so.value('2', _('v2'));
 		so.default = '2';
 		so.depends('uot', '1');
+		so.modalonly = true;
+
+		/* Vless Encryption fields */
+		so = ss.taboption('field_general', form.Flag, 'vless_encryption', _('encryption'));
+		so.default = so.disabled;
+		so.depends('type', 'vless');
+		so.modalonly = true;
+
+		const initVlessEncryptionClientOption = function(o, key) {
+			o.load = function(section_id) {
+				const value = uci.get(data[0], section_id, 'vless_encryption_encryption');
+
+				if (!value)
+					return null;
+
+				return new VlessEncryptionClient(value)[key];
+			}
+			o.onchange = function(ev, section_id, value) {
+				let UIEl = this.section.getUIElement(section_id, 'vless_encryption_encryption');
+				let newpayload = new VlessEncryptionClient(UIEl.getValue()).setKey(key, value);
+
+				UIEl.setValue(newpayload.toString());
+			}
+			o.write = function() {};
+		}
+
+		so = ss.taboption('field_vless_encryption', form.Value, 'vless_encryption_encryption', _('encryption'));
+		so.renderWidget = function(section_id, option_index, cfgvalue) {
+			let node = form.Value.prototype.renderWidget.apply(this, arguments);
+
+			node.firstChild.style.width = '30em';
+
+			return node;
+		},
+		so.rmempty = false;
+		so.depends('vless_encryption', '1');
+		so.modalonly = true;
+
+		so = ss.taboption('field_vless_encryption', form.ListValue, 'vless_encryption_rtt', _('Client') +' '+ _('RTT'));
+		so.default = hm.vless_encryption.rtts[0][0];
+		hm.vless_encryption.rtts.forEach((res) => {
+			so.value.apply(so, res);
+		})
+		initVlessEncryptionClientOption(so, 'rtt');
+		so.rmempty = false;
+		so.depends('vless_encryption', '1');
+		so.modalonly = true;
+
+		so = ss.taboption('field_vless_encryption', !hm.pr7558_merged ? hm.DynamicList : form.DynamicList, 'vless_encryption_paddings', _('Paddings'), // @pr7558_merged
+			_('The server and client can set different padding parameters.') + '</br>' +
+			_('In the order of one <code>Padding-Length</code> and one <code>Padding-Interval</code>, infinite concatenation.') + '</br>' +
+			_('The first padding must have a probability of 100% and at least 35 bytes.'));
+		hm.vless_encryption.paddings.forEach((res) => {
+			so.value.apply(so, res);
+		})
+		initVlessEncryptionClientOption(so, 'paddings');
+		so.validate = function(section_id, value) {
+			if (!value)
+				return true;
+
+			if (!value.match(/^\d+(-\d+){2}$/))
+				return _('Expecting: %s').format('^\\d+(-\\d+){2}$');
+
+			return true;
+		}
+		so.allowduplicates = true;
+		so.depends('vless_encryption', '1');
 		so.modalonly = true;
 
 		/* TLS fields */
@@ -649,6 +762,34 @@ return view.extend({
 			_('This is <strong>DANGEROUS</strong>, your traffic is almost like <strong>PLAIN TEXT</strong>! Use at your own risk!'));
 		so.default = so.disabled;
 		so.depends({tls: '1', type: /^(http|socks5|vmess|vless|trojan|anytls|hysteria|hysteria2|tuic)$/});
+		so.modalonly = true;
+
+		so = ss.taboption('field_tls', form.Value, 'tls_cert_path', _('Certificate path') + _(' (mTLS)'),
+			_('The %s public key, in PEM format.').format(_('Client')));
+		so.value('/etc/fchomo/certs/client_publickey.pem');
+		so.depends('tls', '1');
+		so.modalonly = true;
+
+		so = ss.taboption('field_tls', form.Button, '_upload_cert', _('Upload certificate') + _(' (mTLS)'),
+			_('<strong>Save your configuration before uploading files!</strong>'));
+		so.inputstyle = 'action';
+		so.inputtitle = _('Upload...');
+		so.depends({tls: '1', tls_cert_path: '/etc/fchomo/certs/client_publickey.pem'});
+		so.onclick = L.bind(hm.uploadCertificate, so, _('certificate'), 'client_publickey');
+		so.modalonly = true;
+
+		so = ss.taboption('field_tls', form.Value, 'tls_key_path', _('Key path') + _(' (mTLS)'),
+			_('The %s private key, in PEM format.').format(_('Client')));
+		so.value('/etc/fchomo/certs/client_privatekey.pem');
+		so.depends({tls: '1', tls_cert_path: /.+/});
+		so.modalonly = true;
+
+		so = ss.taboption('field_tls', form.Button, '_upload_key', _('Upload key') + _(' (mTLS)'),
+			_('<strong>Save your configuration before uploading files!</strong>'));
+		so.inputstyle = 'action';
+		so.inputtitle = _('Upload...');
+		so.depends({tls: '1', tls_key_path: '/etc/fchomo/certs/client_privatekey.pem'});
+		so.onclick = L.bind(hm.uploadCertificate, so, _('private key'), 'client_privatekey');
 		so.modalonly = true;
 
 		so = ss.taboption('field_tls', form.Flag, 'tls_ech', _('Enable ECH'));

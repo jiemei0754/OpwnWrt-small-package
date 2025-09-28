@@ -483,104 +483,6 @@ document.addEventListener('click', e => {
 });
 </script>
 
-<script>
-class PageSwipeNavigation {
-    constructor() {
-        this.pages = [
-            { url: './index.php', name: 'home' },
-            { url: './panel.php', name: 'panel' }, 
-            { url: './settings.php', name: 'settings' }, 
-            { url: './singbox.php', name: 'document' },
-            { url: './mihomo_manager.php', name: 'manager' }
-        ];
-        this.currentPageIndex = this.getCurrentPageIndex();
-        this.touchStartX = 0;
-        this.touchEndX = 0;
-        this.minSwipeDistance = 100;
-        this.isAnimating = false;
-        
-        this.init();
-    }
-
-    getCurrentPageIndex() {
-        const currentPath = window.location.pathname;
-        const currentFile = currentPath.split('/').pop();
-        
-        for (let i = 0; i < this.pages.length; i++) {
-            if (this.pages[i].url.includes(currentFile)) {
-                return i;
-            }
-        }
-        return 0;
-    }
-
-    init() {
-        if (window.innerWidth <= 768) {
-            this.setupTouchEvents();
-        }
-        
-        window.addEventListener('resize', () => {
-            if (window.innerWidth <= 768) {
-                this.setupTouchEvents();
-            }
-        });
-    }
-
-    setupTouchEvents() {
-        document.addEventListener('touchstart', (e) => {
-            this.touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-
-        document.addEventListener('touchend', (e) => {
-            this.touchEndX = e.changedTouches[0].screenX;
-            this.handleSwipe();
-        }, { passive: true });
-    }
-
-    handleSwipe() {
-        if (this.isAnimating) return;
-
-        const swipeDistance = this.touchEndX - this.touchStartX;
-        
-        if (Math.abs(swipeDistance) > this.minSwipeDistance) {
-            if (swipeDistance > 0) {
-                this.previousPage();
-            } else {
-                this.nextPage();
-            }
-        }
-    }
-
-    previousPage() {
-        const prevIndex = this.currentPageIndex > 0 
-            ? this.currentPageIndex - 1 
-            : this.pages.length - 1;
-        this.navigateToPage(prevIndex);
-    }
-
-    nextPage() {
-        const nextIndex = this.currentPageIndex < this.pages.length - 1 
-            ? this.currentPageIndex + 1 
-            : 0;
-        this.navigateToPage(nextIndex);
-    }
-
-    navigateToPage(index) {
-        if (this.isAnimating || index === this.currentPageIndex) {
-            return;
-        }
-        
-        this.isAnimating = true;
-        
-        window.location.href = this.pages[index].url;
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    new PageSwipeNavigation();
-});
-</script>
-
 <div class="modal fade" id="autostartModal" tabindex="-1" aria-labelledby="autostartModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-lg">
     <form method="post" class="no-loader">
@@ -1294,10 +1196,22 @@ function updateLanguage(lang) {
         const dynamicContent = el.getAttribute('data-dynamic-content') || '';
 
         if (translations[translationKey]) {
+            let translatedText = translations[translationKey];
+        
+            const indexValue = el.getAttribute('data-index');
+            if (indexValue) {
+                translatedText = translatedText.replace('{index}', indexValue);
+            }
+        
+            const countValue = el.getAttribute('data-count');
+            if (countValue) {
+                translatedText = translatedText.replace('{count}', countValue);
+            }
+
             if (el.tagName === 'OPTGROUP') {
-                el.setAttribute('label', translations[translationKey]);
+                el.setAttribute('label', translatedText);
             } else {
-                el.innerText = translations[translationKey] + dynamicContent; 
+                el.innerText = translatedText + dynamicContent; 
             }
         }
     });
@@ -5762,7 +5676,7 @@ body {
 	writing-mode: vertical-rl;
 	text-orientation: mixed;
 	line-height: 2;
-	z-index: 2;
+	z-index: 1060;
 	flex-direction: column;
 	gap: 0.5em;
 	width: 200px;
@@ -6298,7 +6212,7 @@ body {
 	display: none;
 	justify-content: center;
 	align-items: center;
-	z-index: 1000;
+	z-index: 1050;
 	backdrop-filter: blur(3px);
         transition: opacity 0.3s ease;
 }
@@ -7963,7 +7877,7 @@ input[type=range]::-ms-thumb {
 }
 
 :root {
-	--container-width: 1600px;
+	--container-width: 1700px;
 	--modal-max-width: 1100px;
 }
 
