@@ -88,28 +88,21 @@ function InternetDetector:prequire(package)
 	return ok and pkg
 end
 
-function InternetDetector:loadUCIConfig(sType, instance)
-	local success
-	local num = 0
-	uciCursor:foreach(
-		self.appName,
-		sType,
-		function(s)
-			if s[".name"] == instance then
-				for k, v in pairs(s) do
-					if type(v) == "string" and v:match("^[%d]+$") then
-						v = tonumber(v)
-					end
-					self.serviceConfig[k] = v
-				end
-				success = true
-				self.serviceConfig.instanceNum = num
+function InternetDetector:loadInstanceConfig(instance)
+	local sections = uciCursor:get_all(self.appName)
+	local t        = sections[instance]
+	if t then
+		for k, v in pairs(t) do
+			if type(v) == "string" and v:match("^[%d]+$") then
+				v = tonumber(v)
 			end
-			num = num + 1
+			self.serviceConfig[k] = v
 		end
-	)
-	self.serviceConfig.instance = instance
-	return success
+		self.serviceConfig.instance    = instance
+		self.serviceConfig.instanceNum = t[".index"]
+		return true
+	end
+	return false
 end
 
 function InternetDetector:writeValueToFile(filePath, str)
@@ -247,7 +240,6 @@ function InternetDetector:TCPConnectionToHost(host, port)
 			"GETADDRINFO ERROR: %s, %s", errMsg, errNum))
 	else
 		local family = saTable[1].family
-
 		if family then
 			local sock, errMsg, errNum = socket.socket(family, socket.SOCK_STREAM, 0)
 
@@ -337,7 +329,9 @@ function InternetDetector:mainLoop()
 	signal.signal(signal.SIGQUIT, function(signo) self:exit(signo) end)
 	signal.signal(signal.SIGUSR1, function(signo) self:resetUiCounter(signo) end)
 
-	local lastStatus, currentStatus, mTimeNow, mTimeDiff, mLastTime, uiTimeNow, uiLastTime
+	local mTimeNow, mTimeDiff, mLastTime, uiTimeNow, uiLastTime
+	local lastStatus    = -1
+	local currentStatus = -1
 	local interval      = self.serviceConfig.interval_up
 	local modulesStatus = {}
 	local counter       = 0
@@ -347,14 +341,18 @@ function InternetDetector:mainLoop()
 	local attempt       = 1
 	local checkFunc     = (self.serviceConfig.check_type == 1) and self.pingHost or self.TCPConnectionToHost
 
+	self:writeValueToFile(
+		self.statusFile, self:statusJson(currentStatus, self.serviceConfig.instance))
+
 	while true do
 		if counter == 0 or counter >= interval then
 			checking = true
 		end
 
+		inetChecked = false
+
 		if checking then
-			local newStatus      = 1
-			local checkCompleted = false
+			local newStatus = 1
 			if hostNum <= #self.parsedHosts then
 				if attempt <= self.serviceConfig.connection_attempts then
 					local addr    = self.parsedHosts[hostNum].addr
@@ -375,12 +373,12 @@ function InternetDetector:mainLoop()
 						end
 					end
 					if retCode == 0 then
-						attempt        = 1
-						hostNum        = 1
-						checking       = false
-						newStatus      = 0
-						counter        = 0
-						checkCompleted = true
+						attempt     = 1
+						hostNum     = 1
+						checking    = false
+						newStatus   = 0
+						counter     = 0
+						inetChecked = true
 					else
 						attempt = attempt + 1
 						if attempt > self.serviceConfig.connection_attempts then
@@ -393,19 +391,19 @@ function InternetDetector:mainLoop()
 					hostNum = hostNum + 1
 				end
 				if hostNum > #self.parsedHosts then
-					hostNum        = 1
-					checking       = false
-					counter        = 0
-					checkCompleted = true
+					hostNum     = 1
+					checking    = false
+					counter     = 0
+					inetChecked = true
 				end
 			else
-				hostNum        = 1
-				checking       = false
-				counter        = 0
-				checkCompleted = true
+				hostNum     = 1
+				checking    = false
+				counter     = 0
+				inetChecked = true
 			end
 
-			if checkCompleted then
+			if inetChecked then
 				currentStatus = newStatus
 				if not stat.stat(self.statusFile) then
 					self:writeValueToFile(self.statusFile, self:statusJson(
@@ -418,7 +416,7 @@ function InternetDetector:mainLoop()
 							currentStatus, self.serviceConfig.instance))
 						self:writeLogMessage("notice", "Connected")
 					end
-				else
+				elseif currentStatus == 1 then
 					interval = self.serviceConfig.interval_down
 					if currentStatus ~= lastStatus then
 						self:writeValueToFile(self.statusFile, self:statusJson(
@@ -430,7 +428,6 @@ function InternetDetector:mainLoop()
 		end
 
 		mTimeDiff   = 0
-		inetChecked = (counter == 0)
 		for _, e in ipairs(self.modules) do
 			mTimeNow = time.clock_gettime(time.CLOCK_MONOTONIC).tv_sec
 			if mLastTime then
@@ -439,6 +436,7 @@ function InternetDetector:mainLoop()
 				mTimeDiff = 1
 			end
 			mLastTime = mTimeNow
+
 			if self.debug then
 				e:run(currentStatus, lastStatus, mTimeDiff, mTimeNow, inetChecked)
 			else
@@ -658,9 +656,6 @@ function InternetDetector:run()
 		inspectTable()(self, "self.")
 	end
 
-	self:writeValueToFile(
-		self.statusFile, self:statusJson(-1, self.serviceConfig.instance))
-
 	self:mainLoop()
 	self:exit()
 end
@@ -693,7 +688,7 @@ function InternetDetector:daemon()
 end
 
 function InternetDetector:setServiceConfig(instance)
-	if self:loadUCIConfig("instance", instance) then
+	if self:loadInstanceConfig(instance) then
 		self:parseHosts()
 		if self.mode == 2 then
 			self.loggingLevel = 0
