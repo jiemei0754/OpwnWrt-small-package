@@ -781,7 +781,7 @@ filter_direct_node_list() {
 }
 
 add_firewall_rule() {
-	echolog "开始加载防火墙规则..."
+	echolog "开始加载 iptables 防火墙规则..."
 	ipset -! create $IPSET_LOCAL nethash maxelem 1048576
 	ipset -! create $IPSET_LAN nethash maxelem 1048576
 	ipset -! create $IPSET_VPS nethash maxelem 1048576
