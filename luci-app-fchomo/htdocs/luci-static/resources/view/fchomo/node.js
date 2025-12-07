@@ -345,8 +345,9 @@ return view.extend({
 		so.modalonly = true;
 
 		so = ss.taboption('field_general', form.ListValue, 'mieru_transport', _('Transport'));
-		so.value('TCP');
 		so.default = 'TCP';
+		so.value('TCP');
+		so.value('UDP');
 		so.depends('type', 'mieru');
 		so.modalonly = true;
 
@@ -364,6 +365,46 @@ return view.extend({
 		so.value('HANDSHAKE_STANDARD');
 		so.value('HANDSHAKE_NO_WAIT');
 		so.depends('type', 'mieru');
+		so.modalonly = true;
+
+		/* Sudoku fields */
+		so = ss.taboption('field_general', form.Value, 'sudoku_key', _('Key'),
+			_('The ED25519 available private key or UUID provided by Sudoku server.'));
+		so.rmempty = false;
+		so.depends('type', 'sudoku');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.ListValue, 'sudoku_aead_method', _('Chipher'));
+		so.default = hm.sudoku_cipher_methods[0][0];
+		hm.sudoku_cipher_methods.forEach((res) => {
+			so.value.apply(so, res);
+		})
+		so.depends('type', 'sudoku');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.ListValue, 'sudoku_table_type', _('Obfuscate type'));
+		so.value('prefer_ascii', _('Obfuscated as ASCII data stream'));
+		so.value('prefer_entropy', _('Obfuscated as low-entropy data stream'));
+		so.depends('type', 'sudoku');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'sudoku_padding_min', _('Minimum padding'));
+		so.datatype = 'uinteger';
+		so.default = 2;
+		so.rmempty = false;
+		so.depends('type', 'sudoku');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'sudoku_padding_max', _('Maximum padding'));
+		so.datatype = 'uinteger';
+		so.default = 7;
+		so.rmempty = false;
+		so.depends('type', 'sudoku');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Flag, 'sudoku_http_mask', _('HTTP mask'));
+		so.default = so.enabled;
+		so.depends('type', 'sudoku');
 		so.modalonly = true;
 
 		/* Snell fields */
@@ -1280,12 +1321,24 @@ return view.extend({
 				.format('https://wiki.metacubex.one/config/proxy-providers/content/', _('Contents')));
 		so.placeholder = _('Content will not be verified, Please make sure you enter it correctly.');
 		so.load = function(section_id) {
-			return L.resolveDefault(hm.readFile(this.section.sectiontype, section_id), '');
+			const option = uci.get(data[0], section_id, 'type');
+
+			if (option === 'file')
+				return L.resolveDefault(hm.readFile(this.section.sectiontype, section_id), '');
 		}
-		so.write = L.bind(hm.writeFile, so, so.section.sectiontype);
-		so.remove = L.bind(hm.writeFile, so, so.section.sectiontype);
-		so.rmempty = false;
-		so.retain = true;
+		so.write = function(section_id, formvalue) {
+			const option = uci.get(data[0], section_id, 'type');
+
+			if (option === 'file')
+				return hm.writeFile.call(this, this.section.sectiontype, section_id, formvalue);
+		}
+		so.remove = function(section_id) {
+			const option = uci.get(data[0], section_id, 'type');
+			const cached_option = this.section.getOption('type').cfgvalue(section_id);
+
+			if (option === 'file' && cached_option === 'file')
+				return hm.writeFile.call(this, this.section.sectiontype, section_id);
+		}
 		so.depends('type', 'file');
 		so.modalonly = true;
 
@@ -1540,9 +1593,7 @@ return view.extend({
 		so.depends('type', 'provider');
 		so.modalonly = true;
 
-		so = ss.option(form.ListValue, 'chain_head', _('Chain head') + _(' (Destination)'),
-			_('Recommended to use UoT node.</br>such as <code>%s</code>.')
-			.format('ss|ssr|vmess|vless|trojan|tuic'));
+		so = ss.option(form.ListValue, 'chain_head', _('Chain head') + _(' (Destination)'));
 		so.load = L.bind(hm.loadNodeLabel, so, [['', _('-- Please choose --')]]);
 		so.rmempty = false;
 		so.validate = function(section_id, value) {
@@ -1562,9 +1613,7 @@ return view.extend({
 		so.depends({chain_tail: /.+/, '!reverse': true});
 		so.modalonly = true;
 
-		so = ss.option(form.ListValue, 'chain_tail', _('Chain tail') + _(' (Transit)'),
-			_('Recommended to use UoT node.</br>such as <code>%s</code>.')
-			.format('ss|ssr|vmess|vless|trojan|tuic'));
+		so = ss.option(form.ListValue, 'chain_tail', _('Chain tail') + _(' (Transit)'));
 		so.load = L.bind(hm.loadNodeLabel, so, [['', _('-- Please choose --')]]);
 		so.rmempty = false;
 		so.validate = function(section_id, value) {
