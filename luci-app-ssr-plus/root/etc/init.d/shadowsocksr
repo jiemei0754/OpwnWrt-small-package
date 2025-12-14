@@ -1040,7 +1040,15 @@ Start_Run() {
 	if [ "$_local" == "1" ]; then
 		local socks_port=$(uci_get_by_type socks5_proxy local_port)
 		tcp_config_file=$TMP_PATH/local-ssr-retcp.json
-		[ "$mode" == "tcp,udp" ] && tcp_config_file=$TMP_PATH/local-udp-ssr-retcp.json
+		[ "$mode" == "tcp,udp" ] && {
+			if command -v nft >/dev/null 2>&1; then
+				# nftables / fw4
+				tcp_config_file=$TMP_PATH/local-nft-ssr-retcp.json
+			else
+				# iptables / fw3
+				tcp_config_file=$TMP_PATH/local-udp-ssr-retcp.json
+			fi
+		}
 	fi
 	local tcp_port=$(uci_get_by_name $GLOBAL_SERVER local_port)
 	local type=$(uci_get_by_name $GLOBAL_SERVER type)
@@ -1514,10 +1522,10 @@ stop() {
 	set_lock
 	if command -v nft >/dev/null 2>&1; then
 		/usr/bin/ssr-rules -K
-		local CLEANUP_PERSISTENCE="$(uci_get_by_type global global_server nil)"
-		if [ "$CLEANUP_PERSISTENCE" == "nil" ]; then
-			/usr/bin/ssr-rules -X
-		fi
+		#local CLEANUP_PERSISTENCE="$(uci_get_by_type global global_server nil)"
+		#if [ "$CLEANUP_PERSISTENCE" == "nil" ]; then
+		#	/usr/bin/ssr-rules -X
+		#fi
 	fi
 	/usr/bin/ssr-rules -f
 	local srulecount=0
