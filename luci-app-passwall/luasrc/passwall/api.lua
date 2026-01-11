@@ -421,7 +421,7 @@ function is_ipv6(val)
 end
 
 function is_local_ip(ip)
-	ip = tostring(ip or ""):lower()
+	ip = trim(ip):lower()
 	ip = ip:gsub("^[%w%d]+://", "")   -- 去掉协议头
 		:gsub("/.*$", "")          -- 去掉路径
 		:gsub("^%[", ""):gsub("%]$", "") -- 去掉IPv6方括号
@@ -1229,7 +1229,7 @@ function get_version()
 end
 
 function to_check_self()
-	local url = "https://raw.githubusercontent.com/xiaorouji/openwrt-passwall/main/luci-app-passwall/Makefile"
+	local url = "https://raw.githubusercontent.com/Openwrt-Passwall/openwrt-passwall/main/luci-app-passwall/Makefile"
 	local tmp_file = "/tmp/passwall_makefile"
 	local return_code, result = curl_auto(url, tmp_file, curl_args)
 	result = return_code == 0
