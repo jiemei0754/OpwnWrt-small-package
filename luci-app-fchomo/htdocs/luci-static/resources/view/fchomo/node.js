@@ -94,7 +94,7 @@ const parseProviderYaml = hm.parseYaml.extend({
 		if (!cfg.type)
 			return null;
 
-		// key mapping // 2025/07/11
+		// key mapping // 2026/01/17
 		let config = hm.removeBlankAttrs({
 			id: this.id,
 			label: this.label,
@@ -265,7 +265,7 @@ return view.extend({
 		so.modalonly = true;
 
 		so = ss.taboption('field_general', hm.TextValue, 'headers', _('HTTP header'));
-		so.placeholder = '{\n  "User-Agent": [\n    "Clash/v1.18.0",\n    "mihomo/1.18.3"\n  ],\n  "Authorization": [\n    //"token 1231231"\n  ]\n}';
+		so.placeholder = '{\n  "User-Agent": [\n    "mihomo/1.18.3"\n  ],\n  "Authorization": [\n    //"token 1231231"\n  ]\n}';
 		so.validate = hm.validateJson;
 		so.depends('type', 'http');
 		so.modalonly = true;
@@ -447,6 +447,10 @@ return view.extend({
 		so.datatype = 'or(hostname, hostport)';
 		so.placeholder = 'example.com[:443]';
 		so.depends({sudoku_http_mask_mode: /^(stream|poll|auto)$/});
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'sudoku_path_root', _('HTTP root path'));
+		so.depends('sudoku_http_mask', '1');
 		so.modalonly = true;
 
 		so = ss.taboption('field_general', form.RichListValue, 'sudoku_http_mask_multiplex', _('HTTP mask multiplex'),
@@ -695,6 +699,12 @@ return view.extend({
 
 		so = ss.taboption('field_general', form.DynamicList, 'wireguard_reserved', _('Reserved field bytes'));
 		so.datatype = 'integer';
+		so.depends('type', 'wireguard');
+		so.modalonly = true;
+
+		so = ss.taboption('field_general', form.Value, 'wireguard_persistent_keepalive', _('Persistent keepalive'),
+			_('Periodically sends data packets to maintain connection persistence.'));
+		so.datatype = 'uinteger';
 		so.depends('type', 'wireguard');
 		so.modalonly = true;
 
@@ -986,6 +996,11 @@ return view.extend({
 		so.depends('tls_ech', '1');
 		so.modalonly = true;
 
+		so = ss.taboption('field_tls', form.Value, 'tls_ech_query_server_name', _('ECH HTTPS record query servername'),
+			_('Overrides the domain name used for HTTPS record queries.'));
+		so.depends('tls_ech', '1');
+		so.modalonly = true;
+
 		// uTLS fields
 		so = ss.taboption('field_tls', form.ListValue, 'tls_client_fingerprint', _('Client fingerprint'));
 		so.default = hm.tls_client_fingerprints[0][0];
@@ -1091,6 +1106,11 @@ return view.extend({
 		so.modalonly = true;
 
 		so = ss.taboption('field_transport', form.Value, 'transport_grpc_servicename', _('gRPC service name'));
+		so.depends({transport_enabled: '1', transport_type: 'grpc'});
+		so.modalonly = true;
+
+		so = ss.taboption('field_transport', form.Value, 'transport_grpc_user_agent', _('gRPC User-Agent'));
+		so.placeholder = 'grpc-go/1.36.0';
 		so.depends({transport_enabled: '1', transport_type: 'grpc'});
 		so.modalonly = true;
 
@@ -1253,7 +1273,6 @@ return view.extend({
 							'    size-limit: 0\n' +
 							'    header:\n' +
 							'      User-Agent:\n' +
-							'      - "Clash/v1.18.0"\n' +
 							'      - "mihomo/1.18.3"\n' +
 							'      Accept:\n' +
 							"      - 'application/vnd.github.v3.raw'\n" +
@@ -1436,7 +1455,7 @@ return view.extend({
 
 		so = ss.taboption('field_general', hm.TextValue, 'header', _('HTTP header'),
 			_('Custom HTTP header.'));
-		so.placeholder = '{\n  "User-Agent": [\n    "Clash/v1.18.0",\n    "mihomo/1.18.3"\n  ],\n  "Accept": [\n    //"application/vnd.github.v3.raw"\n  ],\n  "Authorization": [\n    //"token 1231231"\n  ]\n}';
+		so.placeholder = '{\n  "User-Agent": [\n    "mihomo/1.18.3"\n  ],\n  "Accept": [\n    //"application/vnd.github.v3.raw"\n  ],\n  "Authorization": [\n    //"token 1231231"\n  ]\n}';
 		so.validate = hm.validateJson;
 		so.depends('type', 'http');
 		so.modalonly = true;
